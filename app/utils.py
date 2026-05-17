@@ -272,4 +272,4 @@ def generate_unit_report_csv(unit_id: str, class_id: str = None, department_id: 
         return output.getvalue()
     except Exception as e:
         return f"Error generating report: {str(e)}"
-}
+
