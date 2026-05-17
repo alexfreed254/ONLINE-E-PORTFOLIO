@@ -1,15 +1,22 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_login import LoginManager
 from dotenv import load_dotenv
 from datetime import datetime
+from pathlib import Path
 import os
 
 load_dotenv()
 
 login_manager = LoginManager()
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 def create_app():
-    app = Flask(__name__, template_folder='../templates', static_folder='../static')
+    app = Flask(
+        __name__,
+        template_folder=str(BASE_DIR / 'templates'),
+        static_folder=str(BASE_DIR / 'static'),
+    )
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-change-me')
     app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB
 
@@ -43,6 +50,10 @@ def create_app():
     app.register_blueprint(dept_admin_bp,  url_prefix='/dept-admin')
     app.register_blueprint(trainer_bp,     url_prefix='/trainer')
     app.register_blueprint(trainee_bp,     url_prefix='/trainee')
+
+    @app.route('/health')
+    def health():
+        return jsonify({'status': 'ok'}), 200
 
     @login_manager.user_loader
     def load_user(user_id):
