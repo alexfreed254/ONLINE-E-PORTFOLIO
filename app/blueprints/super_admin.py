@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from functools import wraps
 from app.db import get_db
+from app.auth_service import STAFF_ROLES, create_staff_auth_user, update_staff_auth_password
 from app.utils import log_action, format_bytes
 from datetime import datetime
 
@@ -142,12 +143,22 @@ def add_user():
     if len(pw) < 8:
         flash('Password must be at least 8 characters.', 'danger')
         return redirect(url_for('super_admin.users'))
-    data['password_hash'] = generate_password_hash(pw)
     if data['role'] == 'trainee':
         adm = data.get('admission_no') or ''
         if not adm.isdigit() or len(adm) != 5:
             flash('Trainees require a 5-digit admission number.', 'danger')
             return redirect(url_for('super_admin.users'))
+        data['password_hash'] = generate_password_hash(pw)
+    elif data['role'] in STAFF_ROLES:
+        try:
+            data['auth_user_id'] = create_staff_auth_user(data['email'], pw)
+            data['password_hash'] = ''
+        except Exception as e:
+            flash(f'Supabase Auth error: {e}', 'danger')
+            return redirect(url_for('super_admin.users'))
+    else:
+        flash('Invalid role.', 'danger')
+        return redirect(url_for('super_admin.users'))
     try:
         db.table('users').insert(data).execute()
         log_action('CREATE_USER', 'user', None, f"{data['full_name']} ({data['role']})")
@@ -176,10 +187,22 @@ def toggle_user(user_id):
 @login_required
 @super_admin_required
 def reset_password(user_id):
+    db = get_db()
     new_pw = request.form.get('new_password', 'Password@123')
-    get_db().table('users').update({'password_hash': generate_password_hash(new_pw)}).eq('id', user_id).execute()
-    log_action('RESET_PASSWORD', 'user', user_id)
-    flash('Password reset successfully.', 'success')
+    user = db.table('users').select('role, auth_user_id').eq('id', user_id).single().execute().data
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('super_admin.users'))
+    try:
+        if user.get('auth_user_id') and user.get('role') in STAFF_ROLES:
+            update_staff_auth_password(user['auth_user_id'], new_pw)
+            db.table('users').update({'password_hash': ''}).eq('id', user_id).execute()
+        else:
+            db.table('users').update({'password_hash': generate_password_hash(new_pw)}).eq('id', user_id).execute()
+        log_action('RESET_PASSWORD', 'user', user_id)
+        flash('Password reset successfully.', 'success')
+    except Exception as e:
+        flash(f'Error: {e}', 'danger')
     return redirect(url_for('super_admin.users'))
 
 

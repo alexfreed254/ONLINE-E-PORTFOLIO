@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from functools import wraps
 from app.db import get_db
+from app.auth_service import create_staff_auth_user
 from app.utils import log_action, CLASSES_AND_UNITS
 import secrets
 import string
@@ -259,18 +260,20 @@ def add_trainer():
         flash('Email and name are required.', 'danger')
         return redirect(url_for('dept_admin.trainers'))
     try:
+        auth_id = create_staff_auth_user(email, temp_pw)
         db.table('users').insert({
             'email': email,
             'full_name': name,
             'role': 'trainer',
             'department_id': dep_id,
             'staff_no': staff or None,
-            'password_hash': generate_password_hash(temp_pw),
+            'auth_user_id': auth_id,
+            'password_hash': '',
             'created_by': str(current_user.id),
             'is_active': True,
         }).execute()
         log_action('CREATE_TRAINER', 'user', None, name)
-        flash(f'Trainer "{name}" created. Temp password: {temp_pw}', 'success')
+        flash(f'Trainer "{name}" created. Login email: {email} | Temp password: {temp_pw}', 'success')
     except Exception as e:
         flash(f'Error: {e}', 'danger')
     return redirect(url_for('dept_admin.trainers'))

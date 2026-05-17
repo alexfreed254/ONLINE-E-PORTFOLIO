@@ -14,8 +14,9 @@ class User(UserMixin):
         self.department_id = data.get('department_id')
         self.admission_no  = data.get('admission_no')
         self.staff_no      = data.get('staff_no')
+        self.auth_user_id  = data.get('auth_user_id')
         self._is_active    = data.get('is_active', True)
-        self.password_hash = data.get('password_hash', '')
+        self.password_hash = data.get('password_hash') or ''
 
     def get_id(self):
         return str(self.id)

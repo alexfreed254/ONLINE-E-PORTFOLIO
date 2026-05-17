@@ -3,6 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from app.models import User
 from app.db import get_db
+from app.auth_service import authenticate_staff, STAFF_ROLES, update_staff_auth_password
 from app.utils import log_action
 from datetime import datetime
 
@@ -48,11 +49,11 @@ def login():
             if not email:
                 flash('Please enter your email address.', 'danger')
                 return render_template('auth/login.html', active_tab='staff')
-            user = User.get_by_email(email)
-            if not user or not check_password_hash(user.password_hash, password):
+            user = authenticate_staff(email, password)
+            if not user:
                 flash('Invalid email or password.', 'danger')
                 return render_template('auth/login.html', active_tab='staff')
-            if user.role not in ('super_admin', 'dept_admin', 'trainer'):
+            if user.role not in STAFF_ROLES:
                 flash('Staff login is for Super Admins, Department Admins and Trainers only. Use the Trainee tab.', 'warning')
                 return render_template('auth/login.html', active_tab='trainee')
 
@@ -111,10 +112,6 @@ def change_password():
         new_pw     = request.form.get('new_password', '')
         confirm_pw = request.form.get('confirm_password', '')
 
-        if not check_password_hash(current_user.password_hash, current_pw):
-            flash('Current password is incorrect.', 'danger')
-            return render_template('auth/change_password.html')
-
         if len(new_pw) < 8:
             flash('New password must be at least 8 characters.', 'danger')
             return render_template('auth/change_password.html')
@@ -123,8 +120,17 @@ def change_password():
             flash('Passwords do not match.', 'danger')
             return render_template('auth/change_password.html')
 
-        hashed = generate_password_hash(new_pw)
-        get_db().table('users').update({'password_hash': hashed}).eq('id', current_user.id).execute()
+        if current_user.role in STAFF_ROLES and current_user.auth_user_id:
+            if not authenticate_staff(current_user.email, current_pw):
+                flash('Current password is incorrect.', 'danger')
+                return render_template('auth/change_password.html')
+            update_staff_auth_password(current_user.auth_user_id, new_pw)
+        else:
+            if not check_password_hash(current_user.password_hash, current_pw):
+                flash('Current password is incorrect.', 'danger')
+                return render_template('auth/change_password.html')
+            hashed = generate_password_hash(new_pw)
+            get_db().table('users').update({'password_hash': hashed}).eq('id', current_user.id).execute()
         log_action('CHANGE_PASSWORD', 'user', current_user.id)
         flash('Password changed successfully.', 'success')
         return redirect(url_for('auth.dashboard_redirect'))

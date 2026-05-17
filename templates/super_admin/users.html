@@ -4,9 +4,13 @@
 {% block content %}
 <div class="mb-5 p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-900">
   <i class="fas fa-info-circle mr-1"></i>
-  <strong>First-time setup:</strong> create the initial Super Admin in Supabase using
-  <code class="bg-white px-1 rounded">bootstrap_super_admin.sql</code>, then sign in with email and password.
-  Additional users (admins, trainers, trainees) are added here or by Department Admins.
+  <strong>Super Admin via Supabase Authentication:</strong>
+  <ol class="list-decimal list-inside text-xs mt-2 space-y-1">
+    <li>Supabase → Authentication → Users → Add user (email, password, auto-confirm)</li>
+    <li>SQL Editor → run <code class="bg-white px-1 rounded">link_super_admin_from_auth.sql</code></li>
+    <li>Staff Login on the app with that email and password</li>
+  </ol>
+  <p class="text-xs mt-2 opacity-80">Staff added in the form below are created in Supabase Auth automatically.</p>
 </div>
 
 <!-- Filter tabs -->

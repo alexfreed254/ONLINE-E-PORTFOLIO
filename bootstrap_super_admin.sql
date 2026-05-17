@@ -1,9 +1,17 @@
 -- ============================================================
--- ONE-TIME: Create the first Super Administrator
--- Run this in Supabase → SQL Editor AFTER supabase_schema.sql
--- Default password: Admin@1234  (change immediately after login)
+-- SUPER ADMIN SETUP (choose ONE method)
 -- ============================================================
 
+-- ── METHOD A (recommended): Supabase Authentication → Add user ──
+-- 1. Dashboard → Authentication → Users → Add user
+-- 2. Email + password, tick "Auto Confirm User"
+-- 3. Run: link_super_admin_from_auth.sql
+
+-- ── METHOD B: SQL only (legacy, no Supabase Auth) ──
+-- Uses werkzeug password hash in public.users only.
+-- Default password: Admin@1234
+
+/*
 INSERT INTO users (email, password_hash, full_name, role, is_active)
 VALUES (
     'superadmin@ttieportfolio.ac.ke',
@@ -13,3 +21,4 @@ VALUES (
     TRUE
 )
 ON CONFLICT (email) DO NOTHING;
+*/

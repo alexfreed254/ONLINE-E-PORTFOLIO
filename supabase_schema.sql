@@ -21,7 +21,8 @@ CREATE TABLE departments (
 CREATE TABLE users (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email           TEXT NOT NULL UNIQUE,
-    password_hash   TEXT NOT NULL,
+    password_hash   TEXT,                 -- trainees (admission login); empty for Supabase Auth staff
+    auth_user_id    UUID UNIQUE,          -- links to auth.users for staff (super_admin, dept_admin, trainer)
     full_name       TEXT NOT NULL,
     role            TEXT NOT NULL CHECK (role IN ('super_admin','dept_admin','trainer','trainee')),
     department_id   UUID REFERENCES departments(id) ON DELETE SET NULL,
