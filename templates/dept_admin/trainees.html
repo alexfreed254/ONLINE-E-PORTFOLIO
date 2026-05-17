@@ -11,28 +11,146 @@
 <a href="{{ url_for('dept_admin.trainees') }}" class="sidebar-link text-slate-100 active"><i class="fas fa-user-graduate w-5 text-center"></i> Trainees</a>
 {% endblock %}
 {% block content %}
-<div class="grid lg:grid-cols-3 gap-6">
-  <!-- Add Trainee -->
-  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+
+<!-- ── Top action bar ── -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <div>
+    <h2 class="text-lg font-extrabold text-slate-800">Trainees</h2>
+    <p class="text-xs text-slate-400">Register individually or bulk-import from CSV</p>
+  </div>
+  <div class="flex gap-2">
+    <button onclick="document.getElementById('modal-add').classList.remove('hidden')"
+      class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all">
+      <i class="fas fa-user-plus"></i> Add Trainee
+    </button>
+    <button onclick="document.getElementById('modal-import').classList.remove('hidden')"
+      class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all">
+      <i class="fas fa-file-csv"></i> Import CSV
+    </button>
+  </div>
+</div>
+
+<!-- ── Trainees Table ── -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+  <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+    <h3 class="text-sm font-bold text-slate-700">
+      <i class="fas fa-users text-violet-500 mr-2"></i>Registered Trainees
+      <span class="ml-2 bg-violet-100 text-violet-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ trainees|length }}</span>
+    </h3>
+    <!-- Search -->
+    <input type="text" id="trainee-search" placeholder="Search name or adm no…"
+      oninput="filterTrainees(this.value)"
+      class="text-sm border-2 border-slate-200 rounded-xl px-3 py-1.5 focus:border-violet-400 focus:outline-none w-52">
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm" id="trainee-table">
+      <thead>
+        <tr class="bg-slate-50 border-b border-slate-100">
+          <th class="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase tracking-wide">Adm No</th>
+          <th class="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase tracking-wide">Full Name</th>
+          <th class="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase tracking-wide">Class</th>
+          <th class="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase tracking-wide">Units</th>
+          <th class="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase tracking-wide">Dept</th>
+          <th class="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase tracking-wide">Status</th>
+          <th class="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase tracking-wide">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trainees %}
+        <tr class="border-b border-slate-50 hover:bg-slate-50 trainee-row"
+            data-search="{{ t.full_name|lower }} {{ t.admission_no or '' }}">
+          <td class="py-3 px-4 font-mono text-indigo-600 font-bold text-sm">{{ t.admission_no or '—' }}</td>
+          <td class="py-3 px-4 font-semibold text-slate-800">{{ t.full_name }}</td>
+
+          <!-- Class names -->
+          <td class="py-3 px-4 text-xs text-slate-600">
+            {% if t.enrolled_classes %}
+              {% for cls in t.enrolled_classes %}
+                <span class="inline-block bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2 py-0.5 font-semibold mr-1 mb-1">
+                  {{ cls.name }}
+                </span>
+              {% endfor %}
+            {% else %}
+              <span class="text-slate-300">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Unit code + name -->
+          <td class="py-3 px-4 text-xs text-slate-600 max-w-xs">
+            {% if t.units %}
+              <div class="flex flex-wrap gap-1">
+                {% for u in t.units %}
+                  <span class="inline-block bg-violet-50 text-violet-700 border border-violet-200 rounded-lg px-2 py-0.5 font-semibold"
+                        title="{{ u.name }}">
+                    {% if u.code %}<span class="font-mono font-bold">{{ u.code }}</span> — {% endif %}{{ u.name }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <span class="text-slate-300">—</span>
+            {% endif %}
+          </td>
+
+          <td class="py-3 px-4 text-xs text-slate-500">{{ t.departments.name if t.departments else '—' }}</td>
+          <td class="py-3 px-4">
+            <span class="pill {% if t.is_active %}badge-approved{% else %}badge-rejected{% endif %}">
+              {{ 'Active' if t.is_active else 'Inactive' }}
+            </span>
+          </td>
+          <td class="py-3 px-4">
+            <form method="POST" action="{{ url_for('dept_admin.delete_trainee', trainee_id=t.id) }}"
+              onsubmit="return confirm('Delete trainee {{ t.full_name }}? This cannot be undone.')">
+              <button type="submit"
+                class="text-xs px-2 py-1 rounded-lg font-bold bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400 text-sm">
+            <i class="fas fa-user-graduate text-3xl mb-3 block opacity-30"></i>
+            No trainees registered yet. Add one or import from CSV.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL — Add Single Trainee
+══════════════════════════════════════════════════════════ -->
+<div id="modal-add" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.45);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+    <button onclick="document.getElementById('modal-add').classList.add('hidden')"
+      class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg">
+      <i class="fas fa-times"></i>
+    </button>
     <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
       <i class="fas fa-user-plus text-violet-500"></i> Register Trainee
     </h3>
     <form method="POST" action="{{ url_for('dept_admin.add_trainee') }}" class="space-y-3">
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name</label>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name *</label>
         <input type="text" name="full_name" required
           class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
       </div>
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-        <input type="email" name="email" required
-          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Admission No (5 digits)</label>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Admission No (5 digits) *</label>
         <input type="text" name="admission_no" required maxlength="5" pattern="\d{5}"
           class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm font-mono"
           placeholder="12345">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email (optional)</label>
+        <input type="email" name="email"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm"
+          placeholder="Leave blank to auto-generate">
       </div>
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Enroll in Class</label>
@@ -55,59 +173,112 @@
       </div>
       <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
         <p class="text-xs text-amber-800 font-semibold">
-          <i class="fas fa-info-circle mr-1"></i>
-          A temporary password will be generated. Share it with the trainee.
+          <i class="fas fa-key mr-1"></i>
+          A temporary password will be generated and shown after saving. Share it with the trainee so they can self-register.
         </p>
       </div>
-      <button type="submit"
-        class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 rounded-xl transition-all text-sm">
-        <i class="fas fa-plus mr-2"></i> Register Trainee
-      </button>
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="document.getElementById('modal-add').classList.add('hidden')"
+          class="flex-1 border-2 border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-sm hover:bg-slate-50 transition-all">
+          Cancel
+        </button>
+        <button type="submit"
+          class="flex-1 bg-violet-600 hover:bg-violet-700 text-white font-bold py-2.5 rounded-xl transition-all text-sm">
+          <i class="fas fa-plus mr-1"></i> Register
+        </button>
+      </div>
     </form>
   </div>
+</div>
 
-  <!-- Trainees List -->
-  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-    <h3 class="text-base font-bold text-slate-800 mb-4">Registered Trainees ({{ trainees|length }})</h3>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-slate-100">
-            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Name</th>
-            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Adm No</th>
-            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Email</th>
-            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Dept</th>
-            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Status</th>
-            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for t in trainees %}
-          <tr class="border-b border-slate-50 hover:bg-slate-50">
-            <td class="py-2 px-3 font-semibold text-slate-800 text-sm">{{ t.full_name }}</td>
-            <td class="py-2 px-3 font-mono text-indigo-600 font-bold text-sm">{{ t.admission_no or '—' }}</td>
-            <td class="py-2 px-3 text-xs text-slate-500">{{ t.email }}</td>
-            <td class="py-2 px-3 text-xs text-slate-500">{{ t.departments.name if t.departments else '—' }}</td>
-            <td class="py-2 px-3">
-              <span class="pill {% if t.is_active %}badge-approved{% else %}badge-rejected{% endif %}">
-                {{ 'Active' if t.is_active else 'Inactive' }}
-              </span>
-            </td>
-            <td class="py-2 px-3">
-              <form method="POST" action="{{ url_for('dept_admin.delete_trainee', trainee_id=t.id) }}"
-                onsubmit="return confirm('Delete trainee {{ t.full_name }}?')">
-                <button type="submit" class="text-xs px-2 py-1 rounded-lg font-bold bg-red-50 text-red-700 hover:bg-red-100">
-                  <i class="fas fa-trash-alt"></i>
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% else %}
-          <tr><td colspan="6" class="py-8 text-center text-slate-400 text-sm">No trainees registered yet.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL — Import CSV
+══════════════════════════════════════════════════════════ -->
+<div id="modal-import" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.45);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative">
+    <button onclick="document.getElementById('modal-import').classList.add('hidden')"
+      class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg">
+      <i class="fas fa-times"></i>
+    </button>
+    <h3 class="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
+      <i class="fas fa-file-csv text-emerald-500"></i> Bulk Import Trainees
+    </h3>
+    <p class="text-xs text-slate-500 mb-4">Upload a CSV file to register multiple trainees at once.</p>
+
+    <!-- CSV format guide -->
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+      <p class="text-xs font-bold text-slate-600 uppercase mb-2">Required CSV Format</p>
+      <div class="overflow-x-auto">
+        <table class="text-xs w-full border-collapse">
+          <thead>
+            <tr class="bg-slate-200">
+              <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">admission_no</th>
+              <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">full_name</th>
+              <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">class_name <span class="font-normal text-slate-400">(optional)</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="bg-white">
+              <td class="px-3 py-1.5 font-mono border border-slate-200 text-indigo-600">12345</td>
+              <td class="px-3 py-1.5 border border-slate-200">John Doe</td>
+              <td class="px-3 py-1.5 border border-slate-200 text-slate-400">ICT Class A</td>
+            </tr>
+            <tr class="bg-slate-50">
+              <td class="px-3 py-1.5 font-mono border border-slate-200 text-indigo-600">67890</td>
+              <td class="px-3 py-1.5 border border-slate-200">Jane Smith</td>
+              <td class="px-3 py-1.5 border border-slate-200 text-slate-400">ICT Class B</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="mt-3 space-y-1 text-xs text-slate-500">
+        <li><i class="fas fa-check-circle text-emerald-500 mr-1"></i> First row must be the header row</li>
+        <li><i class="fas fa-check-circle text-emerald-500 mr-1"></i> <code class="bg-slate-200 px-1 rounded">admission_no</code> must be exactly 5 digits</li>
+        <li><i class="fas fa-check-circle text-emerald-500 mr-1"></i> <code class="bg-slate-200 px-1 rounded">class_name</code> must match an existing class name exactly</li>
+        <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> Trainees already in the system are skipped (no duplicates)</li>
+        <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> A temporary password is auto-generated for each new trainee</li>
+      </ul>
     </div>
+
+    <!-- Download template link -->
+    <div class="mb-3 text-right">
+      <a href="{{ url_for('dept_admin.trainees_csv_template') }}"
+         class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-800 transition-colors">
+        <i class="fas fa-download"></i> Download CSV Template
+      </a>
+    </div>
+
+    <form method="POST" action="{{ url_for('dept_admin.import_trainees') }}" enctype="multipart/form-data" class="space-y-3">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Select CSV File</label>
+        <input type="file" name="csv_file" accept=".csv" required
+          class="w-full text-sm text-slate-600 border-2 border-dashed border-slate-300 rounded-xl px-3 py-3
+                 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700
+                 hover:border-emerald-400 cursor-pointer transition-colors">
+      </div>
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="document.getElementById('modal-import').classList.add('hidden')"
+          class="flex-1 border-2 border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-sm hover:bg-slate-50 transition-all">
+          Cancel
+        </button>
+        <button type="submit"
+          class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition-all text-sm">
+          <i class="fas fa-upload mr-1"></i> Import
+        </button>
+      </div>
+    </form>
   </div>
 </div>
+
+<script>
+function filterTrainees(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.trainee-row').forEach(function(row) {
+    row.style.display = row.dataset.search.includes(q) ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}

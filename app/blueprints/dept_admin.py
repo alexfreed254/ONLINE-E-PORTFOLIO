@@ -366,7 +366,33 @@ def trainees():
     data    = q.order('full_name').execute().data or []
     deps    = db.table('departments').select('*').order('name').execute().data or []
     classes = db.table('classes').select('*').order('name').execute().data or []
-    return render_template('dept_admin/trainees.html', trainees=data, departments=deps, classes=classes)
+
+    # Enrich each trainee with their enrolled class and units
+    for t in data:
+        enrollments = (db.table('enrollments')
+                       .select('classes(id, name)')
+                       .eq('trainee_id', t['id'])
+                       .execute().data or [])
+        t['enrolled_classes'] = [e['classes'] for e in enrollments if e.get('classes')]
+
+        # Collect units for each enrolled class
+        unit_rows = []
+        for enr in t['enrolled_classes']:
+            cu = (db.table('class_units')
+                  .select('units(id, name, code)')
+                  .eq('class_id', enr['id'])
+                  .execute().data or [])
+            unit_rows.extend([r['units'] for r in cu if r.get('units')])
+        # Deduplicate by unit id
+        seen = set()
+        t['units'] = []
+        for u in unit_rows:
+            if u['id'] not in seen:
+                seen.add(u['id'])
+                t['units'].append(u)
+
+    return render_template('dept_admin/trainees.html',
+                           trainees=data, departments=deps, classes=classes)
 
 
 @dept_admin_bp.route('/trainees/add', methods=['POST'])
@@ -381,12 +407,17 @@ def add_trainee():
     class_id = request.form.get('class_id', '').strip()
     temp_pw  = generate_temp_password()
 
-    if not email or not name or not adm_no:
-        flash('Email, name and admission number are required.', 'danger')
+    if not name or not adm_no:
+        flash('Full name and admission number are required.', 'danger')
         return redirect(url_for('dept_admin.trainees'))
     if len(adm_no) != 5 or not adm_no.isdigit():
         flash('Admission number must be exactly 5 digits.', 'danger')
         return redirect(url_for('dept_admin.trainees'))
+
+    # Email is optional — generate a placeholder if not provided
+    if not email:
+        email = f'{adm_no}@ttieportfolio.local'
+
     try:
         result = db.table('users').insert({
             'email':         email,
@@ -409,9 +440,110 @@ def add_trainee():
                 pass
 
         log_action('CREATE_TRAINEE', 'user', None, f'{name} ({adm_no})')
-        flash(f'Trainee "{name}" (ADM: {adm_no}) created. Temp password: {temp_pw}', 'success')
+        flash(f'Trainee "{name}" (ADM: {adm_no}) added. '
+              f'Temp password: {temp_pw} — share this with the trainee.', 'success')
     except Exception as e:
         flash(f'Error: {e}', 'danger')
+    return redirect(url_for('dept_admin.trainees'))
+
+
+@dept_admin_bp.route('/trainees/csv-template')
+@login_required
+@dept_admin_required
+def trainees_csv_template():
+    """Download a blank CSV template for bulk trainee import."""
+    from flask import make_response
+    csv_content = "admission_no,full_name,class_name\n12345,John Doe,ICT Class A\n67890,Jane Smith,\n"
+    resp = make_response(csv_content)
+    resp.headers['Content-Disposition'] = 'attachment; filename="trainees_import_template.csv"'
+    resp.headers['Content-Type'] = 'text/csv'
+    return resp
+
+
+@dept_admin_bp.route('/trainees/import', methods=['POST'])
+@login_required
+@dept_admin_required
+def import_trainees():
+    """
+    Bulk import trainees from a CSV file.
+    Expected columns (header row required):
+        admission_no, full_name, class_name   (class_name is optional)
+    """
+    import csv, io
+    db     = get_db()
+    dep_id = str(current_user.department_id) if current_user.department_id else None
+    f      = request.files.get('csv_file')
+
+    if not f or f.filename == '':
+        flash('Please select a CSV file.', 'danger')
+        return redirect(url_for('dept_admin.trainees'))
+
+    try:
+        content  = f.read().decode('utf-8-sig')   # handle BOM
+        reader   = csv.DictReader(io.StringIO(content))
+        required = {'admission_no', 'full_name'}
+        if not required.issubset({c.strip().lower() for c in (reader.fieldnames or [])}):
+            flash('CSV must have columns: admission_no, full_name  (class_name optional)', 'danger')
+            return redirect(url_for('dept_admin.trainees'))
+
+        # Build class name → id lookup
+        all_classes = db.table('classes').select('id, name').execute().data or []
+        class_map   = {c['name'].strip().lower(): c['id'] for c in all_classes}
+
+        added = skipped = errors = 0
+        for row in reader:
+            adm_no    = str(row.get('admission_no', '')).strip().zfill(5)
+            full_name = str(row.get('full_name', '')).strip()
+            cls_name  = str(row.get('class_name', '')).strip()
+
+            if not adm_no or not full_name:
+                errors += 1
+                continue
+            if not adm_no.isdigit() or len(adm_no) != 5:
+                errors += 1
+                continue
+
+            # Skip if already exists
+            existing = (db.table('users').select('id')
+                        .eq('admission_no', adm_no).execute().data)
+            if existing:
+                skipped += 1
+                continue
+
+            temp_pw = generate_temp_password()
+            email   = f'{adm_no}@ttieportfolio.local'
+            try:
+                result = db.table('users').insert({
+                    'email':         email,
+                    'full_name':     full_name,
+                    'role':          'trainee',
+                    'department_id': dep_id,
+                    'admission_no':  adm_no,
+                    'password_hash': generate_password_hash(temp_pw),
+                    'created_by':    str(current_user.id),
+                    'is_active':     True,
+                }).execute()
+
+                # Enroll in class if provided
+                class_id = class_map.get(cls_name.lower()) if cls_name else None
+                if class_id and result.data:
+                    try:
+                        db.table('enrollments').insert({
+                            'trainee_id': result.data[0]['id'],
+                            'class_id':   class_id
+                        }).execute()
+                    except Exception:
+                        pass
+                added += 1
+            except Exception:
+                errors += 1
+
+        log_action('IMPORT_TRAINEES', 'user', None,
+                   f'Imported {added}, skipped {skipped}, errors {errors}')
+        flash(f'Import complete — {added} added, {skipped} already existed, {errors} errors.', 'success')
+    except Exception as e:
+        flash(f'Import failed: {e}', 'danger')
+
     return redirect(url_for('dept_admin.trainees'))
 
 

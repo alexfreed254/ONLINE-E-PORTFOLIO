@@ -285,8 +285,16 @@
           </form>
         </div>
 
-        <!-- Back to home -->
-        <div style="margin-top:20px;text-align:center;">
+        <!-- Register link (trainee only) + Back to home -->
+        <div style="margin-top:20px;text-align:center;" id="register-link-wrap">
+          <p style="color:rgba(255,255,255,0.4);font-size:0.78rem;margin:0 0 8px;">
+            First time here?
+            <a href="{{ url_for('auth.register') }}"
+               style="color:#60a5fa;font-weight:700;text-decoration:none;"
+               onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">
+              Activate your account
+            </a>
+          </p>
           <a href="{{ url_for('auth.login') }}" class="back-link">
             <i class="fas fa-arrow-left" style="font-size:0.7rem;"></i> Back to Home
           </a>
@@ -312,7 +320,16 @@ function switchTab(tab) {
   document.getElementById('tab-trainee-btn').className = 'tab-btn' + (isTrainee ? ' active' : '');
 
   document.getElementById('card-subtitle').textContent = isTrainee ? 'Trainee Login' : 'Admin Login';
+
+  // Show "Activate your account" link only on trainee tab
+  document.getElementById('register-link-wrap').style.display = isTrainee ? 'block' : 'none';
 }
+
+// Set initial state on page load
+(function() {
+  var isTrainee = document.getElementById('tab-trainee-btn').classList.contains('active');
+  document.getElementById('register-link-wrap').style.display = isTrainee ? 'block' : 'none';
+})();
 
 function togglePw(inputId, iconId) {
   var inp  = document.getElementById(inputId);
