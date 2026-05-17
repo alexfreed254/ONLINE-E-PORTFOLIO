@@ -57,6 +57,14 @@
             <p class="text-xs text-slate-400">{{ c.code }} &bull; {{ c.departments.name if c.departments else '—' }}</p>
           </div>
         </div>
+        <form method="POST" action="{{ url_for('dept_admin.delete_course', course_id=c.id) }}"
+              onsubmit="return confirm('Delete course \'{{ c.name }}\'? This will also remove all linked units and classes.')">
+          <button type="submit"
+            class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors"
+            title="Delete course">
+            <i class="fas fa-trash-alt text-xs"></i>
+          </button>
+        </form>
       </div>
       {% else %}
       <div class="py-10 text-center text-slate-400">

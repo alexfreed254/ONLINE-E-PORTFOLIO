@@ -153,6 +153,22 @@ def add_course():
     return redirect(url_for('dept_admin.courses'))
 
 
+@dept_admin_bp.route('/courses/delete/<course_id>', methods=['POST'])
+@login_required
+@dept_admin_required
+def delete_course(course_id):
+    db = get_db()
+    try:
+        course = db.table('courses').select('name').eq('id', course_id).single().execute().data
+        name   = course['name'] if course else course_id
+        db.table('courses').delete().eq('id', course_id).execute()
+        log_action('DELETE_COURSE', 'course', course_id, name)
+        flash(f'Course "{name}" deleted.', 'success')
+    except Exception as e:
+        flash(f'Error deleting course: {e}', 'danger')
+    return redirect(url_for('dept_admin.courses'))
+
+
 # ─────────────────────────────────────────────────────────────
 # UNITS
 # ─────────────────────────────────────────────────────────────
@@ -191,6 +207,22 @@ def add_unit():
         flash(f'Unit "{name}" created.', 'success')
     except Exception as e:
         flash(f'Error: {e}', 'danger')
+    return redirect(url_for('dept_admin.units'))
+
+
+@dept_admin_bp.route('/units/delete/<unit_id>', methods=['POST'])
+@login_required
+@dept_admin_required
+def delete_unit(unit_id):
+    db = get_db()
+    try:
+        unit = db.table('units').select('name').eq('id', unit_id).single().execute().data
+        name = unit['name'] if unit else unit_id
+        db.table('units').delete().eq('id', unit_id).execute()
+        log_action('DELETE_UNIT', 'unit', unit_id, name)
+        flash(f'Unit "{name}" deleted.', 'success')
+    except Exception as e:
+        flash(f'Error deleting unit: {e}', 'danger')
     return redirect(url_for('dept_admin.units'))
 
 
