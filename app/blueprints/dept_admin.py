@@ -189,6 +189,8 @@ def add_class():
             'department_id': dep_id,
             'intake_year': request.form.get('intake_year') or None,
             'intake_month': request.form.get('intake_month', '').strip() or None,
+            'level': request.form.get('level', '').strip() or None,
+            'cycle': request.form.get('cycle', '').strip() or None,
             'created_by': str(current_user.id)
         }).execute()
         log_action('CREATE_CLASS', 'class', None, name)

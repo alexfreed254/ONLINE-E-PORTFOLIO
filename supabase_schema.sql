@@ -69,6 +69,8 @@ CREATE TABLE classes (
     department_id   UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
     intake_year     INTEGER,
     intake_month    TEXT,
+    level           TEXT CHECK (level IN ('Level 3','Level 4','Level 5','Level 6')),
+    cycle           TEXT CHECK (cycle IN ('Cycle 1','Cycle 2','Cycle 3','Cycle 3 Moderated')),
     created_by      UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
