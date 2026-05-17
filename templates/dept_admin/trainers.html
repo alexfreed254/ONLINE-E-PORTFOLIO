@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Trainers{% endblock %}
+{% block page_title %}Trainer Management{% endblock %}
+{% block content %}
+<div class="grid lg:grid-cols-3 gap-6">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <i class="fas fa-user-plus text-violet-500"></i> Add Trainer
+    </h3>
+    <form method="POST" action="{{ url_for('dept_admin.add_trainer') }}" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Full Name</label>
+        <input type="text" name="full_name" required
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Email</label>
+        <input type="email" name="email" required
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Staff No</label>
+        <input type="text" name="staff_no"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Department</label>
+        <select name="department_id"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+          {% for dep in departments %}
+          <option value="{{ dep.id }}" {% if dep.id == current_user.department_id %}selected{% endif %}>{{ dep.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+        <p class="text-xs text-amber-800 font-semibold">
+          <i class="fas fa-info-circle mr-1"></i>
+          A temporary password will be shown after creation. Share it securely.
+        </p>
+      </div>
+      <button type="submit"
+        class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 rounded-xl transition-all text-sm">
+        <i class="fas fa-plus mr-2"></i> Add Trainer
+      </button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-base font-bold text-slate-800 mb-4">Trainers ({{ trainers|length }})</h3>
+    <div class="space-y-3">
+      {% for t in trainers %}
+      <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+            <i class="fas fa-chalkboard-teacher text-emerald-600"></i>
+          </div>
+          <div>
+            <p class="font-bold text-slate-800 text-sm">{{ t.full_name }}</p>
+            <p class="text-xs text-slate-400">{{ t.email }}</p>
+            {% if t.staff_no %}<p class="text-xs font-mono text-slate-500">Staff: {{ t.staff_no }}</p>{% endif %}
+          </div>
+        </div>
+        <span class="pill {% if t.is_active %}badge-approved{% else %}badge-rejected{% endif %}">
+          {{ 'Active' if t.is_active else 'Inactive' }}
+        </span>
+      </div>
+      {% else %}
+      <div class="py-10 text-center text-slate-400">
+        <i class="fas fa-chalkboard-teacher text-3xl mb-3 block"></i>
+        <p class="text-sm">No trainers yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

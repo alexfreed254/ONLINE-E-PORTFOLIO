@@ -1,0 +1,12 @@
+<a href="{{ url_for('trainee.dashboard') }}"
+  class="sidebar-link text-indigo-200 {% if request.endpoint == 'trainee.dashboard' %}active{% endif %}">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('trainee.upload') }}"
+  class="sidebar-link text-indigo-200 {% if request.endpoint == 'trainee.upload' %}active{% endif %}">
+  <i class="fas fa-cloud-upload-alt w-5 text-center"></i> Upload Assessment
+</a>
+<a href="{{ url_for('trainee.my_files') }}"
+  class="sidebar-link text-indigo-200 {% if request.endpoint == 'trainee.my_files' %}active{% endif %}">
+  <i class="fas fa-folder-open w-5 text-center"></i> My Files
+</a>

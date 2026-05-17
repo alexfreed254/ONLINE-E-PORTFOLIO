@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Super Admin Dashboard{% endblock %}
+{% block page_title %}Super Admin Dashboard{% endblock %}
+{% block page_subtitle %}System-wide overview and management{% endblock %}
+{% block content %}
+<!-- Stats Grid -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-indigo-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Departments</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.departments }}</p>
+    <i class="fas fa-building text-indigo-200 text-2xl mt-2"></i>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-emerald-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Total Users</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.users }}</p>
+    <div class="flex gap-2 mt-2 flex-wrap">
+      <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{{ stats.dept_admins }} Admins</span>
+      <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{{ stats.trainers }} Trainers</span>
+      <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{{ stats.trainees }} Trainees</span>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-amber-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Classes</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.classes }}</p>
+    <i class="fas fa-chalkboard text-amber-200 text-2xl mt-2"></i>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-rose-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Assessments</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.assessments }}</p>
+    <div class="flex gap-2 mt-2 flex-wrap">
+      <span class="pill badge-approved">{{ stats.approved }} Approved</span>
+      <span class="pill badge-pending">{{ stats.pending }} Pending</span>
+      <span class="pill badge-rejected">{{ stats.rejected }} Rejected</span>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Logs -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+  <div class="flex items-center justify-between mb-5">
+    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+      <i class="fas fa-history text-indigo-500"></i> Recent System Activity
+    </h3>
+    <a href="{{ url_for('super_admin.logs') }}" class="text-xs text-indigo-600 font-bold hover:underline">View All Logs →</a>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100">
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Time</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">User</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Action</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Detail</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr class="border-b border-slate-50 hover:bg-slate-50">
+          <td class="py-2 px-3 text-xs text-slate-400 whitespace-nowrap">
+            {{ log.created_at[:16].replace('T',' ') if log.created_at else '—' }}
+          </td>
+          <td class="py-2 px-3 font-semibold text-slate-700 text-xs">
+            {{ log.users.full_name if log.users else 'System' }}
+            {% if log.users %}
+            <span class="text-slate-400">({{ log.users.role.replace('_',' ') }})</span>
+            {% endif %}
+          </td>
+          <td class="py-2 px-3">
+            <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-md">{{ log.action }}</span>
+          </td>
+          <td class="py-2 px-3 text-xs text-slate-500 max-w-xs truncate">{{ log.detail or '—' }}</td>
+          <td class="py-2 px-3 text-xs text-slate-400 font-mono">{{ log.ip_address or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="py-8 text-center text-slate-400 text-sm">No activity yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

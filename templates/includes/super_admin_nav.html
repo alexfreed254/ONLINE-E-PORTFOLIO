@@ -1,0 +1,20 @@
+<a href="{{ url_for('super_admin.dashboard') }}"
+  class="sidebar-link text-slate-200 {% if request.endpoint == 'super_admin.dashboard' %}active{% endif %}">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('super_admin.departments') }}"
+  class="sidebar-link text-slate-300 {% if request.endpoint == 'super_admin.departments' %}active{% endif %}">
+  <i class="fas fa-building w-5 text-center"></i> Departments
+</a>
+<a href="{{ url_for('super_admin.users') }}"
+  class="sidebar-link text-slate-300 {% if request.endpoint == 'super_admin.users' %}active{% endif %}">
+  <i class="fas fa-users w-5 text-center"></i> All Users
+</a>
+<a href="{{ url_for('super_admin.assessments') }}"
+  class="sidebar-link text-slate-300 {% if request.endpoint == 'super_admin.assessments' %}active{% endif %}">
+  <i class="fas fa-file-alt w-5 text-center"></i> Assessments
+</a>
+<a href="{{ url_for('super_admin.logs') }}"
+  class="sidebar-link text-slate-300 {% if request.endpoint == 'super_admin.logs' %}active{% endif %}">
+  <i class="fas fa-list-alt w-5 text-center"></i> System Logs
+</a>

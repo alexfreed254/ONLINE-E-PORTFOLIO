@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Assign Units to Class{% endblock %}
+{% block page_title %}Assign Units{% endblock %}
+{% block page_subtitle %}{{ cls.name }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center">
+        <i class="fas fa-link text-violet-600 text-xl"></i>
+      </div>
+      <div>
+        <h2 class="text-lg font-bold text-slate-800">{{ cls.name }}</h2>
+        <p class="text-xs text-slate-400">Select units to assign to this class</p>
+      </div>
+    </div>
+
+    <form method="POST" class="space-y-4">
+      <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
+        {% for unit in all_units %}
+        <label class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
+          {% if unit.id in assigned_ids %}border-violet-300 bg-violet-50{% else %}border-slate-100 hover:border-violet-200{% endif %}">
+          <input type="checkbox" name="unit_ids" value="{{ unit.id }}"
+            {% if unit.id in assigned_ids %}checked{% endif %}
+            class="w-4 h-4 text-violet-600 rounded">
+          <span class="font-semibold text-slate-700 text-sm">{{ unit.name }}</span>
+          {% if unit.code %}
+          <span class="text-xs text-slate-400 font-mono ml-auto">{{ unit.code }}</span>
+          {% endif %}
+        </label>
+        {% else %}
+        <p class="text-center text-slate-400 py-6 text-sm">No units available. Create units first.</p>
+        {% endfor %}
+      </div>
+
+      <div class="flex gap-3 pt-4">
+        <button type="submit"
+          class="flex-1 bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 rounded-xl transition-all">
+          <i class="fas fa-save mr-2"></i> Save Unit Assignments
+        </button>
+        <a href="{{ url_for('dept_admin.classes') }}"
+          class="px-6 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors text-sm">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

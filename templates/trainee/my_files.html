@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}My Files{% endblock %}
+{% block page_title %}My Assessment Files{% endblock %}
+{% block page_subtitle %}All your submitted assessments and their approval status{% endblock %}
+{% block content %}
+<!-- Summary Bar -->
+<div class="flex flex-wrap gap-3 mb-6">
+  <a href="{{ url_for('trainee.my_files') }}"
+    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all
+    {% if not status_filter %}bg-indigo-600 text-white shadow-md{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
+    All ({{ counts.total }})
+  </a>
+  <a href="{{ url_for('trainee.my_files', status='pending') }}"
+    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all
+    {% if status_filter == 'pending' %}bg-amber-500 text-white shadow-md{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
+    <i class="fas fa-clock"></i> Pending ({{ counts.pending }})
+  </a>
+  <a href="{{ url_for('trainee.my_files', status='approved') }}"
+    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all
+    {% if status_filter == 'approved' %}bg-emerald-600 text-white shadow-md{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
+    <i class="fas fa-check-circle"></i> Approved ({{ counts.approved }})
+  </a>
+  <a href="{{ url_for('trainee.my_files', status='rejected') }}"
+    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all
+    {% if status_filter == 'rejected' %}bg-red-600 text-white shadow-md{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
+    <i class="fas fa-times-circle"></i> Rejected ({{ counts.rejected }})
+  </a>
+  <a href="{{ url_for('trainee.upload') }}"
+    class="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">
+    <i class="fas fa-plus"></i> Upload New
+  </a>
+</div>
+
+<!-- Files List -->
+<div class="space-y-4">
+  {% for a in assessments %}
+  <div class="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow
+    {% if a.status == 'approved' %}border-l-4 border-l-emerald-500 border-slate-100
+    {% elif a.status == 'rejected' %}border-l-4 border-l-red-500 border-slate-100
+    {% else %}border-l-4 border-l-amber-400 border-slate-100{% endif %} p-5">
+
+    <div class="flex items-start justify-between gap-4">
+      <!-- File Info -->
+      <div class="flex items-start gap-3 flex-1 overflow-hidden">
+        <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-file-pdf text-red-500 text-xl"></i>
+        </div>
+        <div class="overflow-hidden flex-1">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="pill
+              {% if a.status == 'approved' %}badge-approved
+              {% elif a.status == 'rejected' %}badge-rejected
+              {% else %}badge-pending{% endif %}">
+              {% if a.status == 'approved' %}<i class="fas fa-check-circle"></i>
+              {% elif a.status == 'rejected' %}<i class="fas fa-times-circle"></i>
+              {% else %}<i class="fas fa-clock"></i>{% endif %}
+              {{ a.status.capitalize() }}
+            </span>
+            <span class="text-xs bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-md">{{ a.assessment_type }}</span>
+            {% if a.evidence_count > 0 %}
+            <span class="text-xs bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-md">
+              <i class="fas fa-images mr-1"></i>{{ a.evidence_count }} evidence
+            </span>
+            {% endif %}
+          </div>
+          <p class="font-bold text-slate-800 text-sm break-words">{{ a.script_file_name or 'Assessment Script' }}</p>
+          <p class="text-xs text-slate-500 mt-0.5">
+            {{ a.classes.name if a.classes else '—' }} &bull; {{ a.units.name if a.units else '—' }}
+          </p>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Assessment #{{ a.assessment_no }} &bull; T{{ a.term }}/C{{ a.cycle }}/{{ a.year }}
+            &bull; {{ a.script_file_size_fmt }}
+            &bull; {{ a.uploaded_at[:10] if a.uploaded_at else '' }}
+          </p>
+          {% if a.review_note and a.status == 'rejected' %}
+          <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-xs text-red-700 font-semibold">
+              <i class="fas fa-comment-alt mr-1"></i>Trainer note: {{ a.review_note }}
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex flex-col gap-2 flex-shrink-0">
+        {% if a.script_file_path %}
+        <a href="{{ a.script_file_path }}" target="_blank"
+          class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5">
+          <i class="fas fa-eye"></i> View PDF
+        </a>
+        {% endif %}
+        <a href="{{ url_for('trainee.upload_evidence', assessment_id=a.id) }}"
+          class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5">
+          <i class="fas fa-images"></i> Evidence
+        </a>
+      </div>
+    </div>
+
+    <!-- Rejected: delete + re-upload actions -->
+    {% if a.status == 'rejected' %}
+    <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+      <p class="text-xs text-red-700 font-bold mb-3">
+        <i class="fas fa-exclamation-triangle mr-1"></i>
+        This file was rejected. Delete it and re-upload the correct scanned assessment.
+      </p>
+      <div class="flex gap-2 flex-wrap">
+        <form method="POST" action="{{ url_for('trainee.delete_assessment', assessment_id=a.id) }}"
+          onsubmit="return confirm('Permanently delete this rejected assessment? This cannot be undone.')">
+          <button type="submit"
+            class="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow transition-all active:scale-95">
+            <i class="fas fa-trash-alt"></i> Delete File
+          </button>
+        </form>
+        <a href="{{ url_for('trainee.upload') }}"
+          class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition-all active:scale-95">
+          <i class="fas fa-cloud-upload-alt"></i> Re-Upload
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-100">
+    <i class="fas fa-folder-open text-5xl mb-4 block"></i>
+    <p class="font-bold text-lg">No assessments found.</p>
+    {% if status_filter %}
+    <p class="text-sm mt-1">No {{ status_filter }} assessments.</p>
+    <a href="{{ url_for('trainee.my_files') }}" class="inline-block mt-3 text-indigo-600 font-bold text-sm hover:underline">View all files</a>
+    {% else %}
+    <a href="{{ url_for('trainee.upload') }}"
+      class="inline-flex items-center gap-2 mt-4 bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-indigo-700 transition-all text-sm">
+      <i class="fas fa-cloud-upload-alt"></i> Upload your first assessment
+    </a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

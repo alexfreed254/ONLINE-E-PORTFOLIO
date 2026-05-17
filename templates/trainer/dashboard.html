@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Trainer Dashboard{% endblock %}
+{% block page_title %}Trainer Dashboard{% endblock %}
+{% block content %}
+<!-- Stats -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-slate-400 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Total</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.total }}</p>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-amber-400 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Pending Review</p>
+    <p class="text-3xl font-black text-amber-600 mt-1">{{ stats.pending }}</p>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-emerald-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Approved</p>
+    <p class="text-3xl font-black text-emerald-600 mt-1">{{ stats.approved }}</p>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-red-400 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Rejected</p>
+    <p class="text-3xl font-black text-red-600 mt-1">{{ stats.rejected }}</p>
+  </div>
+</div>
+
+<!-- Pending Queue -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+  <div class="flex items-center justify-between mb-5">
+    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+      <i class="fas fa-clock text-amber-500"></i> Pending Review Queue
+    </h3>
+    <a href="{{ url_for('trainer.browse') }}" class="text-xs text-emerald-600 font-bold hover:underline">Browse All →</a>
+  </div>
+
+  {% if recent_pending %}
+  <div class="space-y-3">
+    {% for a in recent_pending %}
+    <div class="flex items-center justify-between p-4 bg-amber-50 border border-amber-100 rounded-xl">
+      <div class="flex items-center gap-3 flex-1 overflow-hidden">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-file-pdf text-red-500"></i>
+        </div>
+        <div class="overflow-hidden">
+          <p class="font-bold text-slate-800 text-sm truncate">{{ a.script_file_name or 'Assessment' }}</p>
+          <p class="text-xs text-slate-500">
+            <span class="font-mono text-indigo-600">{{ a.users.admission_no if a.users else '—' }}</span>
+            &bull; {{ a.classes.name if a.classes else '—' }}
+            &bull; {{ a.units.name if a.units else '—' }}
+          </p>
+          <p class="text-xs text-slate-400">{{ a.assessment_type }} #{{ a.assessment_no }} &bull; T{{ a.term }}/C{{ a.cycle }}/{{ a.year }}</p>
+        </div>
+      </div>
+      <div class="flex gap-2 flex-shrink-0 ml-3">
+        <a href="{{ url_for('trainer.assessment_detail', assessment_id=a.id) }}"
+          class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors">
+          <i class="fas fa-eye mr-1"></i> Review
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="py-12 text-center text-slate-400">
+    <i class="fas fa-check-circle text-4xl text-emerald-300 mb-3 block"></i>
+    <p class="font-semibold">All caught up! No pending assessments.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

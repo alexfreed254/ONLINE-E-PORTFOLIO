@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Trainees{% endblock %}
+{% block page_title %}Trainee Management{% endblock %}
+{% block content %}
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Add Trainee -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <i class="fas fa-user-plus text-violet-500"></i> Register Trainee
+    </h3>
+    <form method="POST" action="{{ url_for('dept_admin.add_trainee') }}" class="space-y-3">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name</label>
+        <input type="text" name="full_name" required
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+        <input type="email" name="email" required
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Admission No (5 digits)</label>
+        <input type="text" name="admission_no" required maxlength="5" pattern="\d{5}"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm font-mono"
+          placeholder="12345">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Enroll in Class</label>
+        <select name="class_id"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+          <option value="">— Optional —</option>
+          {% for cls in classes %}
+          <option value="{{ cls.id }}">{{ cls.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Department</label>
+        <select name="department_id"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+          {% for dep in departments %}
+          <option value="{{ dep.id }}" {% if dep.id == current_user.department_id %}selected{% endif %}>{{ dep.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+        <p class="text-xs text-amber-800 font-semibold">
+          <i class="fas fa-info-circle mr-1"></i>
+          A temporary password will be generated. Share it with the trainee.
+        </p>
+      </div>
+      <button type="submit"
+        class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 rounded-xl transition-all text-sm">
+        <i class="fas fa-plus mr-2"></i> Register Trainee
+      </button>
+    </form>
+  </div>
+
+  <!-- Trainees List -->
+  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-base font-bold text-slate-800 mb-4">Registered Trainees ({{ trainees|length }})</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100">
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Name</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Adm No</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Email</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Dept</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Status</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in trainees %}
+          <tr class="border-b border-slate-50 hover:bg-slate-50">
+            <td class="py-2 px-3 font-semibold text-slate-800 text-sm">{{ t.full_name }}</td>
+            <td class="py-2 px-3 font-mono text-indigo-600 font-bold text-sm">{{ t.admission_no or '—' }}</td>
+            <td class="py-2 px-3 text-xs text-slate-500">{{ t.email }}</td>
+            <td class="py-2 px-3 text-xs text-slate-500">{{ t.departments.name if t.departments else '—' }}</td>
+            <td class="py-2 px-3">
+              <span class="pill {% if t.is_active %}badge-approved{% else %}badge-rejected{% endif %}">
+                {{ 'Active' if t.is_active else 'Inactive' }}
+              </span>
+            </td>
+            <td class="py-2 px-3">
+              <form method="POST" action="{{ url_for('dept_admin.delete_trainee', trainee_id=t.id) }}"
+                onsubmit="return confirm('Delete trainee {{ t.full_name }}?')">
+                <button type="submit" class="text-xs px-2 py-1 rounded-lg font-bold bg-red-50 text-red-700 hover:bg-red-100">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="py-8 text-center text-slate-400 text-sm">No trainees registered yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

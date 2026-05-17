@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}My Dashboard{% endblock %}
+{% block page_title %}My E-Portfolio{% endblock %}
+{% block page_subtitle %}Welcome back, {{ current_user.full_name }}{% endblock %}
+{% block content %}
+<!-- Welcome Banner -->
+<div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 mb-8 text-white shadow-lg">
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h2 class="text-2xl font-extrabold">Hello, {{ current_user.full_name.split()[0] }}! 👋</h2>
+      <p class="text-indigo-200 mt-1 text-sm">
+        Admission No: <span class="font-mono font-bold text-white">{{ current_user.admission_no or '—' }}</span>
+      </p>
+    </div>
+    <a href="{{ url_for('trainee.upload') }}"
+      class="bg-white text-indigo-700 font-extrabold px-6 py-3 rounded-xl shadow hover:bg-indigo-50 transition-all text-sm flex items-center gap-2">
+      <i class="fas fa-cloud-upload-alt"></i> Upload Assessment
+    </a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-slate-400 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Total Uploaded</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.total }}</p>
+    <i class="fas fa-file-alt text-slate-200 text-2xl mt-2"></i>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-amber-400 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Pending Review</p>
+    <p class="text-3xl font-black text-amber-600 mt-1">{{ stats.pending }}</p>
+    <i class="fas fa-clock text-amber-200 text-2xl mt-2"></i>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-emerald-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Approved</p>
+    <p class="text-3xl font-black text-emerald-600 mt-1">{{ stats.approved }}</p>
+    <i class="fas fa-check-circle text-emerald-200 text-2xl mt-2"></i>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-red-400 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Rejected</p>
+    <p class="text-3xl font-black text-red-600 mt-1">{{ stats.rejected }}</p>
+    <i class="fas fa-times-circle text-red-200 text-2xl mt-2"></i>
+  </div>
+</div>
+
+<!-- Rejection Alert -->
+{% if stats.rejected > 0 %}
+<div class="mb-6 p-5 bg-red-50 border-2 border-red-200 rounded-2xl flex items-start gap-4">
+  <div class="bg-red-600 text-white p-2 rounded-lg flex-shrink-0">
+    <i class="fas fa-exclamation-triangle"></i>
+  </div>
+  <div>
+    <h4 class="text-red-900 font-bold text-sm">You have {{ stats.rejected }} rejected assessment(s)</h4>
+    <p class="text-xs text-red-700 mt-1">
+      Go to <strong>My Files</strong>, delete the rejected file(s), then re-upload the correct scanned assessment.
+    </p>
+    <a href="{{ url_for('trainee.my_files', status='rejected') }}"
+      class="inline-flex items-center gap-1.5 mt-2 text-xs font-bold text-red-700 hover:text-red-900 underline">
+      <i class="fas fa-arrow-right"></i> View Rejected Files
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Submissions -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+  <div class="flex items-center justify-between mb-5">
+    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+      <i class="fas fa-history text-indigo-500"></i> Recent Submissions
+    </h3>
+    <a href="{{ url_for('trainee.my_files') }}" class="text-xs text-indigo-600 font-bold hover:underline">View All →</a>
+  </div>
+
+  {% if recent %}
+  <div class="space-y-3">
+    {% for a in recent %}
+    <div class="flex items-center justify-between p-4 rounded-xl border
+      {% if a.status == 'approved' %}bg-emerald-50 border-emerald-100
+      {% elif a.status == 'rejected' %}bg-red-50 border-red-100
+      {% else %}bg-amber-50 border-amber-100{% endif %}">
+      <div class="flex items-center gap-3 flex-1 overflow-hidden">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-file-pdf text-red-500"></i>
+        </div>
+        <div class="overflow-hidden">
+          <p class="font-bold text-slate-800 text-sm truncate">{{ a.script_file_name or 'Assessment Script' }}</p>
+          <p class="text-xs text-slate-500">
+            {{ a.classes.name if a.classes else '—' }} &bull; {{ a.units.name if a.units else '—' }}
+          </p>
+          <p class="text-xs text-slate-400">
+            {{ a.assessment_type }} #{{ a.assessment_no }} &bull; T{{ a.term }}/C{{ a.cycle }}/{{ a.year }}
+            {% if a.evidence_count > 0 %}
+            &bull; <span class="text-purple-600 font-bold">{{ a.evidence_count }} evidence</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0 ml-3">
+        <span class="pill
+          {% if a.status == 'approved' %}badge-approved
+          {% elif a.status == 'rejected' %}badge-rejected
+          {% else %}badge-pending{% endif %}">
+          {% if a.status == 'approved' %}<i class="fas fa-check-circle"></i>
+          {% elif a.status == 'rejected' %}<i class="fas fa-times-circle"></i>
+          {% else %}<i class="fas fa-clock"></i>{% endif %}
+          {{ a.status.capitalize() }}
+        </span>
+        <a href="{{ url_for('trainee.upload_evidence', assessment_id=a.id) }}"
+          class="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors">
+          <i class="fas fa-images mr-1"></i>Evidence
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="py-12 text-center text-slate-400">
+    <i class="fas fa-folder-open text-4xl mb-3 block"></i>
+    <p class="font-semibold">No submissions yet.</p>
+    <a href="{{ url_for('trainee.upload') }}"
+      class="inline-flex items-center gap-2 mt-3 text-sm font-bold text-indigo-600 hover:underline">
+      <i class="fas fa-cloud-upload-alt"></i> Upload your first assessment
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Disclaimer -->
+<div class="mt-6 p-5 bg-red-50 border-2 border-red-100 rounded-2xl">
+  <div class="flex items-start gap-4">
+    <div class="bg-red-600 text-white p-2 rounded-lg flex-shrink-0">
+      <i class="fas fa-exclamation-triangle"></i>
+    </div>
+    <div>
+      <h4 class="text-red-900 font-bold text-sm uppercase">Verification Disclaimer</h4>
+      <p class="text-xs text-red-800 leading-relaxed mt-1">
+        You must ensure you scan the <strong>correct assessment paper</strong> clearly.
+        Inaccurate scans or uploading the <strong>wrong assessment scripts</strong> will result in
+        immediate rejection by the Unit Trainer. <strong>Rejected files must be deleted</strong>
+        from My Files, then re-upload the correct copy.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

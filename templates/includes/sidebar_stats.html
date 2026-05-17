@@ -1,0 +1,67 @@
+{% if sidebar_stats.kind == 'super_admin' %}
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ sidebar_stats.users }}</div>
+    <div class="sidebar-stat-lbl">Users</div>
+  </div>
+  <i class="fas fa-users opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-amber-300">{{ sidebar_stats.pending }}</div>
+    <div class="sidebar-stat-lbl">Pending</div>
+  </div>
+  <i class="fas fa-clock opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-emerald-300">{{ sidebar_stats.approved }}</div>
+    <div class="sidebar-stat-lbl">Approved</div>
+  </div>
+  <i class="fas fa-check-circle opacity-40 text-xl"></i>
+</div>
+{% elif sidebar_stats.kind == 'dept_admin' %}
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ sidebar_stats.classes }}</div>
+    <div class="sidebar-stat-lbl">Classes</div>
+  </div>
+  <i class="fas fa-chalkboard opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ sidebar_stats.trainers }}</div>
+    <div class="sidebar-stat-lbl">Trainers</div>
+  </div>
+  <i class="fas fa-chalkboard-teacher opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ sidebar_stats.trainees }}</div>
+    <div class="sidebar-stat-lbl">Trainees</div>
+  </div>
+  <i class="fas fa-user-graduate opacity-40 text-xl"></i>
+</div>
+{% elif sidebar_stats.kind == 'trainer' %}
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ sidebar_stats.total }}</div>
+    <div class="sidebar-stat-lbl">Total Files</div>
+  </div>
+  <i class="fas fa-file-alt opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-amber-300">{{ sidebar_stats.pending }}</div>
+    <div class="sidebar-stat-lbl">Pending</div>
+  </div>
+  <i class="fas fa-clock opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-emerald-300">{{ sidebar_stats.approved }}</div>
+    <div class="sidebar-stat-lbl">Approved</div>
+  </div>
+  <i class="fas fa-check-circle opacity-40 text-xl"></i>
+</div>
+{% endif %}

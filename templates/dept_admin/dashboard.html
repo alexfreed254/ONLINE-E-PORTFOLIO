@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Dept Admin Dashboard{% endblock %}
+{% block page_title %}Department Admin Dashboard{% endblock %}
+{% block content %}
+<!-- Stats -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-violet-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Classes</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.classes }}</p>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-indigo-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Units</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.units }}</p>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-emerald-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Trainers</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.trainers }}</p>
+  </div>
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-amber-500 shadow-sm">
+    <p class="text-xs font-bold text-slate-400 uppercase">Trainees</p>
+    <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.trainees }}</p>
+  </div>
+</div>
+
+<!-- Recent Assessments -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+  <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+    <i class="fas fa-clock text-violet-500"></i> Recent Submissions
+  </h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100">
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Trainee</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Class</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Unit</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Type</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Status</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in recent %}
+        <tr class="border-b border-slate-50 hover:bg-slate-50">
+          <td class="py-2 px-3">
+            <p class="font-semibold text-slate-800 text-xs">{{ a.users.full_name if a.users else '—' }}</p>
+            <p class="text-xs font-mono text-indigo-600">{{ a.users.admission_no if a.users else '' }}</p>
+          </td>
+          <td class="py-2 px-3 text-xs text-slate-500">{{ a.classes.name if a.classes else '—' }}</td>
+          <td class="py-2 px-3 text-xs text-slate-500">{{ a.units.name if a.units else '—' }}</td>
+          <td class="py-2 px-3 text-xs font-bold text-slate-600">{{ a.assessment_type }}</td>
+          <td class="py-2 px-3">
+            <span class="pill {% if a.status=='approved' %}badge-approved{% elif a.status=='rejected' %}badge-rejected{% else %}badge-pending{% endif %}">
+              {{ a.status.capitalize() }}
+            </span>
+          </td>
+          <td class="py-2 px-3 text-xs text-slate-400">{{ a.uploaded_at[:10] if a.uploaded_at else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="py-8 text-center text-slate-400 text-sm">No submissions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

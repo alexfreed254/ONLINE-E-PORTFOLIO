@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
+{% block content %}
+<div class="mb-5 p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-900">
+  <i class="fas fa-info-circle mr-1"></i>
+  <strong>First-time setup:</strong> create the initial Super Admin in Supabase using
+  <code class="bg-white px-1 rounded">bootstrap_super_admin.sql</code>, then sign in with email and password.
+  Additional users (admins, trainers, trainees) are added here or by Department Admins.
+</div>
+
+<!-- Filter tabs -->
+<div class="flex gap-2 mb-6 flex-wrap">
+  {% for r, label in [('','All'),('super_admin','Super Admin'),('dept_admin','Dept Admin'),('trainer','Trainer'),('trainee','Trainee')] %}
+  <a href="{{ url_for('super_admin.users', role=r) }}"
+    class="px-4 py-2 rounded-xl text-sm font-bold transition-all
+    {% if role_filter == r %}bg-indigo-600 text-white shadow-md{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Add User Form -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <i class="fas fa-user-plus text-indigo-500"></i> Add User
+    </h3>
+    <form method="POST" action="{{ url_for('super_admin.add_user') }}" class="space-y-3">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name</label>
+        <input type="text" name="full_name" required
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+        <input type="email" name="email" required
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
+        <select name="role" required
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm">
+          <option value="">Select Role</option>
+          <option value="super_admin">Super Admin</option>
+          <option value="dept_admin">Dept Admin</option>
+          <option value="trainer">Trainer</option>
+          <option value="trainee">Trainee</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Department</label>
+        <select name="department_id"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm">
+          <option value="">None</option>
+          {% for dep in departments %}
+          <option value="{{ dep.id }}">{{ dep.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Admission No (trainees)</label>
+        <input type="text" name="admission_no" maxlength="5" pattern="\d{5}"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm"
+          placeholder="5 digits">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Staff No (staff)</label>
+        <input type="text" name="staff_no"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Initial Password</label>
+        <input type="text" name="password" value="Password@123"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm">
+      </div>
+      <button type="submit"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all text-sm">
+        <i class="fas fa-plus mr-2"></i> Create User
+      </button>
+    </form>
+  </div>
+
+  <!-- Users Table -->
+  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-base font-bold text-slate-800 mb-4">Users ({{ users|length }})</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100">
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Name</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Role</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Dept</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Status</th>
+            <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr class="border-b border-slate-50 hover:bg-slate-50">
+            <td class="py-2 px-3">
+              <p class="font-semibold text-slate-800">{{ u.full_name }}</p>
+              <p class="text-xs text-slate-400">{{ u.email }}</p>
+              {% if u.admission_no %}<p class="text-xs font-mono text-indigo-600">ADM: {{ u.admission_no }}</p>{% endif %}
+            </td>
+            <td class="py-2 px-3">
+              <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-md capitalize">
+                {{ u.role.replace('_',' ') }}
+              </span>
+            </td>
+            <td class="py-2 px-3 text-xs text-slate-500">
+              {{ u.departments.name if u.departments else '—' }}
+            </td>
+            <td class="py-2 px-3">
+              {% if u.is_active %}
+              <span class="pill badge-approved">Active</span>
+              {% else %}
+              <span class="pill badge-rejected">Inactive</span>
+              {% endif %}
+            </td>
+            <td class="py-2 px-3">
+              <div class="flex gap-1 flex-wrap">
+                <form method="POST" action="{{ url_for('super_admin.toggle_user', user_id=u.id) }}">
+                  <button type="submit" class="text-xs px-2 py-1 rounded-lg font-bold
+                    {% if u.is_active %}bg-amber-50 text-amber-700 hover:bg-amber-100{% else %}bg-emerald-50 text-emerald-700 hover:bg-emerald-100{% endif %}">
+                    {{ 'Deactivate' if u.is_active else 'Activate' }}
+                  </button>
+                </form>
+                {% if u.id != current_user.id %}
+                <form method="POST" action="{{ url_for('super_admin.delete_user', user_id=u.id) }}"
+                  onsubmit="return confirm('Delete user {{ u.full_name }}?')">
+                  <button type="submit" class="text-xs px-2 py-1 rounded-lg font-bold bg-red-50 text-red-700 hover:bg-red-100">
+                    Delete
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="py-8 text-center text-slate-400 text-sm">No users found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

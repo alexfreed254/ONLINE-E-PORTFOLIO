@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Courses{% endblock %}
+{% block page_title %}Course Management{% endblock %}
+{% block content %}
+<div class="grid lg:grid-cols-3 gap-6">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <i class="fas fa-plus-circle text-violet-500"></i> Add Course
+    </h3>
+    <form method="POST" action="{{ url_for('dept_admin.add_course') }}" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Course Name</label>
+        <input type="text" name="name" required placeholder="e.g. Electrical Engineering"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Code</label>
+        <input type="text" name="code" required placeholder="e.g. EEN"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Department</label>
+        <select name="department_id"
+          class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm">
+          {% for dep in departments %}
+          <option value="{{ dep.id }}" {% if dep.id == current_user.department_id %}selected{% endif %}>{{ dep.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit"
+        class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 rounded-xl transition-all text-sm">
+        <i class="fas fa-plus mr-2"></i> Create Course
+      </button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-base font-bold text-slate-800 mb-4">Courses ({{ courses|length }})</h3>
+    <div class="space-y-3">
+      {% for c in courses %}
+      <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+            <i class="fas fa-book text-violet-600"></i>
+          </div>
+          <div>
+            <p class="font-bold text-slate-800 text-sm">{{ c.name }}</p>
+            <p class="text-xs text-slate-400">{{ c.code }} &bull; {{ c.departments.name if c.departments else '—' }}</p>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="py-10 text-center text-slate-400">
+        <i class="fas fa-book text-3xl mb-3 block"></i>
+        <p class="text-sm">No courses yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

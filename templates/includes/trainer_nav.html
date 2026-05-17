@@ -1,0 +1,12 @@
+<a href="{{ url_for('trainer.dashboard') }}"
+  class="sidebar-link text-emerald-200 {% if request.endpoint == 'trainer.dashboard' %}active{% endif %}">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('trainer.browse') }}"
+  class="sidebar-link text-emerald-200 {% if request.endpoint in ('trainer.browse', 'trainer.browse_class', 'trainer.browse_unit') %}active{% endif %}">
+  <i class="fas fa-folder-tree w-5 text-center"></i> Browse
+</a>
+<a href="{{ url_for('trainer.search') }}"
+  class="sidebar-link text-emerald-200 {% if request.endpoint in ('trainer.search', 'trainer.search_results') %}active{% endif %}">
+  <i class="fas fa-search w-5 text-center"></i> Search
+</a>

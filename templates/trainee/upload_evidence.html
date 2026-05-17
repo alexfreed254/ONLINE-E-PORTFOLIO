@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% block title %}Upload Evidence{% endblock %}
+{% block page_title %}Evidence Upload{% endblock %}
+{% block page_subtitle %}Attach photos or videos to your assessment{% endblock %}
+{% block extra_head %}
+<style>
+  .evidence-drop-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  .evidence-drop-zone:hover, .evidence-drop-zone.drag-over {
+    border-color: #7c3aed;
+    background: #f5f3ff;
+  }
+  .evidence-drop-zone.has-file {
+    border-color: #7c3aed;
+    background: #f5f3ff;
+  }
+  .media-thumb {
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 12px;
+    width: 100%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid lg:grid-cols-3 gap-6">
+
+  <!-- Left: Assessment Info + Upload Form -->
+  <div class="lg:col-span-1 space-y-5">
+
+    <!-- Assessment Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+      <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+        <i class="fas fa-file-pdf text-red-500"></i> Linked Assessment
+      </h3>
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="pill
+            {% if assessment.status == 'approved' %}badge-approved
+            {% elif assessment.status == 'rejected' %}badge-rejected
+            {% else %}badge-pending{% endif %}">
+            {{ assessment.status.capitalize() }}
+          </span>
+        </div>
+        <p class="font-bold text-slate-800 text-sm break-words">{{ assessment.script_file_name or 'Assessment Script' }}</p>
+        <p class="text-xs text-slate-500">{{ assessment.classes.name if assessment.classes else '—' }}</p>
+        <p class="text-xs text-slate-500">{{ assessment.units.name if assessment.units else '—' }}</p>
+        <p class="text-xs text-slate-400">
+          {{ assessment.assessment_type }} #{{ assessment.assessment_no }}
+          &bull; T{{ assessment.term }}/C{{ assessment.cycle }}/{{ assessment.year }}
+        </p>
+      </div>
+      {% if assessment.script_file_path %}
+      <a href="{{ assessment.script_file_path }}" target="_blank"
+        class="mt-3 w-full flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 rounded-xl transition-colors text-xs">
+        <i class="fas fa-eye"></i> View PDF Script
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Upload Evidence Form -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+      <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+        <i class="fas fa-plus-circle text-purple-500"></i> Add Evidence
+      </h3>
+      <form method="POST" enctype="multipart/form-data" id="evidence-form" class="space-y-4">
+        <!-- Drop Zone -->
+        <div class="evidence-drop-zone p-6 text-center" id="ev-drop-zone"
+          onclick="document.getElementById('evidence_file').click()"
+          ondragover="event.preventDefault(); this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleEvDrop(event)">
+          <input type="file" name="evidence_file" id="evidence_file" class="hidden"
+            accept=".jpg,.jpeg,.png,.gif,.mp4,.mov,.avi,.mkv,.webm"
+            onchange="handleEvSelect(this)">
+          <div id="ev-icon">
+            <i class="fas fa-images text-4xl text-slate-300 mb-2"></i>
+          </div>
+          <p id="ev-label" class="text-xs font-semibold text-slate-500">
+            Click or drag photo/video here
+          </p>
+          <p class="text-xs text-slate-400 mt-1">JPG, PNG, GIF, MP4, MOV, AVI, MKV, WEBM</p>
+        </div>
+
+        <!-- Caption -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Caption (optional)</label>
+          <input type="text" name="caption" maxlength="200"
+            class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none text-sm"
+            placeholder="Describe this evidence...">
+        </div>
+
+        <button type="submit" id="ev-submit-btn"
+          class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2">
+          <i class="fas fa-upload"></i> Upload Evidence
+        </button>
+      </form>
+
+      <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+        <p class="text-xs text-blue-800 font-semibold">
+          <i class="fas fa-info-circle mr-1"></i>
+          Each photo or video is automatically linked to this specific assessment.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Evidence Gallery -->
+  <div class="lg:col-span-2">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i class="fas fa-images text-purple-500"></i>
+          Evidence Gallery
+          <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ evidence|length }}</span>
+        </h3>
+        <a href="{{ url_for('trainee.my_files') }}" class="text-xs text-indigo-600 font-bold hover:underline">
+          ← Back to My Files
+        </a>
+      </div>
+
+      {% if evidence %}
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {% for ev in evidence %}
+        <div class="rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm hover:shadow-md transition-shadow">
+          <!-- Thumbnail -->
+          {% if ev.file_type == 'photo' %}
+          <a href="{{ ev.file_path }}" target="_blank" class="block">
+            <img src="{{ ev.file_path }}" alt="{{ ev.file_name }}"
+              class="media-thumb hover:opacity-90 transition-opacity"
+              onerror="this.src=''; this.parentElement.innerHTML='<div class=\'w-full aspect-square bg-slate-200 flex items-center justify-center\'><i class=\'fas fa-image text-slate-400 text-3xl\'></i></div>'">
+          </a>
+          {% else %}
+          <div class="w-full aspect-square bg-slate-800 flex items-center justify-center relative">
+            <a href="{{ ev.file_path }}" target="_blank" class="text-white text-center">
+              <i class="fas fa-play-circle text-5xl mb-2 block opacity-80 hover:opacity-100 transition-opacity"></i>
+              <p class="text-xs font-semibold">Play Video</p>
+            </a>
+          </div>
+          {% endif %}
+
+          <!-- Info -->
+          <div class="p-3">
+            <div class="flex items-center gap-1.5 mb-1">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full
+                {% if ev.file_type == 'photo' %}bg-blue-100 text-blue-700{% else %}bg-orange-100 text-orange-700{% endif %}">
+                <i class="fas {% if ev.file_type == 'photo' %}fa-image{% else %}fa-video{% endif %} mr-1"></i>
+                {{ ev.file_type.capitalize() }}
+              </span>
+            </div>
+            <p class="text-xs font-semibold text-slate-700 truncate" title="{{ ev.file_name }}">{{ ev.file_name }}</p>
+            {% if ev.caption %}
+            <p class="text-xs text-slate-500 mt-0.5 italic truncate" title="{{ ev.caption }}">{{ ev.caption }}</p>
+            {% endif %}
+            <div class="flex items-center justify-between mt-2">
+              <p class="text-xs text-slate-400">{{ ev.file_size_fmt }}</p>
+              <form method="POST" action="{{ url_for('trainee.delete_evidence', evidence_id=ev.id) }}"
+                onsubmit="return confirm('Delete this evidence file?')">
+                <button type="submit"
+                  class="text-xs text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="py-16 text-center text-slate-400">
+        <i class="fas fa-images text-5xl mb-4 block"></i>
+        <p class="font-bold text-lg">No evidence uploaded yet.</p>
+        <p class="text-sm mt-1">Use the form on the left to add photos or videos.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Upload overlay -->
+<div id="ev-loading" class="hidden fixed inset-0 bg-indigo-950/60 backdrop-blur-md flex items-center justify-center z-50">
+  <div class="bg-white p-10 rounded-3xl shadow-2xl flex flex-col items-center">
+    <div class="animate-spin rounded-full h-16 w-16 border-4 border-purple-100 border-t-purple-600 mb-4"></div>
+    <p class="font-bold text-purple-900">Uploading Evidence...</p>
+    <p class="text-xs text-slate-500 mt-2">Please do not close this window</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function handleEvSelect(input) {
+  if (input.files[0]) updateEvUI(input.files[0]);
+}
+
+function handleEvDrop(e) {
+  e.preventDefault();
+  document.getElementById('ev-drop-zone').classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('evidence_file').files = e.dataTransfer.files;
+    updateEvUI(file);
+  }
+}
+
+function updateEvUI(file) {
+  var zone  = document.getElementById('ev-drop-zone');
+  var icon  = document.getElementById('ev-icon');
+  var label = document.getElementById('ev-label');
+  zone.classList.add('has-file');
+  var isVideo = /\.(mp4|mov|avi|mkv|webm)$/i.test(file.name);
+  icon.innerHTML = '<i class="fas ' + (isVideo ? 'fa-video' : 'fa-image') + ' text-4xl text-purple-500 mb-2"></i>';
+  label.innerHTML = '<span class="text-purple-700 font-bold">✓ ' + file.name + '</span>';
+}
+
+document.getElementById('evidence-form').addEventListener('submit', function() {
+  document.getElementById('ev-loading').classList.remove('hidden');
+  document.getElementById('ev-submit-btn').disabled = true;
+});
+</script>
+{% endblock %}

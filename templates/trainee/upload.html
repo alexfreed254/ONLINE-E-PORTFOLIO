@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% block title %}Upload Assessment{% endblock %}
+{% block page_title %}Upload Assessment{% endblock %}
+{% block page_subtitle %}Submit your scanned marked assessment script (PDF only){% endblock %}
+{% block extra_head %}
+<style>
+  .upload-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    transition: all 0.3s;
+    background: rgba(241,245,249,0.5);
+    cursor: pointer;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: #4f46e5;
+    background: #eff6ff;
+  }
+  .upload-zone.has-file {
+    border-color: #4f46e5;
+    background: #eef2ff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+        <i class="fas fa-cloud-upload-alt text-indigo-600 text-xl"></i>
+      </div>
+      <div>
+        <h2 class="text-lg font-bold text-slate-800">Upload Scanned Assessment</h2>
+        <p class="text-xs text-slate-400">PDF only &bull; Max 100MB &bull; Admission: <span class="font-mono font-bold text-indigo-600">{{ current_user.admission_no }}</span></p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('trainee.upload') }}" enctype="multipart/form-data" id="upload-form" class="space-y-6">
+
+      <!-- Class & Unit -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Class</label>
+          <select name="class_id" id="class-select" required
+            class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm bg-slate-50 focus:bg-white transition-colors"
+            onchange="loadUnits(this.value)">
+            <option value="">Select your class</option>
+            {% for cls in classes %}
+            <option value="{{ cls.id }}">{{ cls.name }}</option>
+            {% endfor %}
+          </select>
+          {% if not classes %}
+          <p class="text-xs text-amber-600 mt-1.5 font-semibold">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            You are not enrolled in any class. Contact your Department Admin.
+          </p>
+          {% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Unit of Competency</label>
+          <select name="unit_id" id="unit-select" required
+            class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm bg-slate-50 focus:bg-white transition-colors disabled:opacity-60"
+            {% if not classes %}disabled{% endif %}>
+            <option value="">Select class first</option>
+            {% for u in units %}
+            <option value="{{ u.id }}">{{ u.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Term / Cycle / Year / Assessment Type / No -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Term</label>
+          <select name="term" required
+            class="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm bg-slate-50">
+            <option value="">Select</option>
+            <option value="1">TERM 1</option>
+            <option value="2">TERM 2</option>
+            <option value="3">TERM 3</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cycle</label>
+          <select name="cycle" required
+            class="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm bg-slate-50">
+            <option value="">Select</option>
+            <option value="1">CYCLE 1</option>
+            <option value="2">CYCLE 2</option>
+            <option value="3">CYCLE 3</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Year</label>
+          <select name="year" required
+            class="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm bg-slate-50">
+            <option value="">Select</option>
+            {% for y in years %}
+            <option value="{{ y }}" {% if y == now.year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Assess. No.</label>
+          <input type="number" name="assessment_no" min="1" max="99" required
+            class="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm bg-slate-50"
+            placeholder="e.g. 1">
+        </div>
+      </div>
+
+      <!-- Assessment Type -->
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Assessment Type</label>
+        <div class="grid grid-cols-3 gap-3">
+          {% for val, label, icon in [('PRACTICAL','Practical','fa-tools'),('THEORY','Theory','fa-book'),('ORAL','Oral','fa-microphone')] %}
+          <label class="flex items-center gap-3 p-3 border-2 border-slate-200 rounded-xl cursor-pointer hover:border-indigo-400 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+            <input type="radio" name="assessment_type" value="{{ val }}" required class="text-indigo-600">
+            <span class="text-sm font-semibold text-slate-700">
+              <i class="fas {{ icon }} text-indigo-500 mr-1"></i> {{ label }}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- File Upload Zone -->
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Scanned Assessment PDF</label>
+        <div class="upload-zone p-8 text-center" id="drop-zone"
+          onclick="document.getElementById('script_file').click()"
+          ondragover="event.preventDefault(); this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleDrop(event)">
+          <input type="file" name="script_file" id="script_file" accept=".pdf" class="hidden"
+            onchange="handleFileSelect(this)">
+          <div id="file-icon">
+            <i class="fas fa-file-pdf text-5xl text-slate-300 mb-3"></i>
+          </div>
+          <p id="file-label" class="text-sm font-semibold text-slate-500">
+            Click or drag &amp; drop your scanned PDF here
+          </p>
+          <p class="text-xs text-slate-400 mt-1">Maximum file size: 100MB &bull; PDF only</p>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" id="submit-btn"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold py-5 rounded-2xl shadow-xl transition-all text-base flex items-center justify-center gap-3">
+        <i class="fas fa-paper-plane"></i> UPLOAD TO E-PORTFOLIO
+      </button>
+    </form>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="mt-6 p-5 bg-red-50 border-2 border-red-100 rounded-2xl">
+    <div class="flex items-start gap-4">
+      <div class="bg-red-600 text-white p-2 rounded-lg flex-shrink-0">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div>
+        <h4 class="text-red-900 font-bold text-sm uppercase">Verification Disclaimer</h4>
+        <p class="text-xs text-red-800 leading-relaxed mt-1">
+          Ensure you scan the <strong>correct assessment paper</strong> clearly.
+          Uploading the <strong>wrong assessment scripts</strong> will result in immediate rejection.
+          Rejected files must be deleted from <strong>My Files</strong>, then re-uploaded correctly.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="loading-overlay" class="hidden fixed inset-0 bg-indigo-950/60 backdrop-blur-md flex items-center justify-center z-50">
+  <div class="bg-white p-10 rounded-3xl shadow-2xl flex flex-col items-center">
+    <div class="relative">
+      <div class="animate-spin rounded-full h-16 w-16 border-4 border-indigo-100 border-t-indigo-600"></div>
+      <i class="fas fa-cloud-upload-alt absolute inset-0 flex items-center justify-center text-indigo-600 text-xl" style="display:flex;align-items:center;justify-content:center;"></i>
+    </div>
+    <p class="mt-6 font-bold text-indigo-900 tracking-wide">Uploading Document...</p>
+    <p class="text-xs text-slate-500 mt-2">Please do not close this window</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function loadUnits(classId) {
+  var sel = document.getElementById('unit-select');
+  sel.innerHTML = '<option value="">Loading...</option>';
+  sel.disabled = true;
+  if (!classId) {
+    sel.innerHTML = '<option value="">Select class first</option>';
+    return;
+  }
+  fetch('/trainee/api/units/' + classId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      sel.innerHTML = '<option value="">Select unit</option>';
+      (data.units || []).forEach(function(u) {
+        sel.add(new Option(u.name, u.id));
+      });
+      sel.disabled = false;
+    })
+    .catch(function() {
+      sel.innerHTML = '<option value="">Error loading units</option>';
+    });
+}
+
+function handleFileSelect(input) {
+  var file = input.files[0];
+  if (file) updateFileUI(file);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    document.getElementById('script_file').files = e.dataTransfer.files;
+    updateFileUI(file);
+  } else {
+    alert('Please drop a PDF file.');
+  }
+}
+
+function updateFileUI(file) {
+  var zone  = document.getElementById('drop-zone');
+  var icon  = document.getElementById('file-icon');
+  var label = document.getElementById('file-label');
+  zone.classList.add('has-file');
+  icon.innerHTML = '<i class="fas fa-file-pdf text-5xl text-indigo-500 mb-3"></i>';
+  label.innerHTML = '<span class="text-indigo-700 font-bold">✓ ' + file.name + '</span>';
+  label.className = 'text-sm font-semibold text-indigo-700';
+}
+
+document.getElementById('upload-form').addEventListener('submit', function() {
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('submit-btn').disabled = true;
+});
+</script>
+{% endblock %}

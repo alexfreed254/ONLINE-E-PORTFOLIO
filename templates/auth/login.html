@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% block title %}Login — Thika TTI E-Portfolio{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+
+    <!-- Card -->
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-purple-700 p-8 text-center">
+        <div class="w-20 h-20 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+          <i class="fas fa-graduation-cap text-indigo-600 text-3xl"></i>
+        </div>
+        <h1 class="text-2xl font-extrabold text-white tracking-tight">Thika Technical</h1>
+        <p class="text-indigo-200 text-sm mt-0.5">Training Institute</p>
+        <div class="mt-3 inline-flex items-center gap-2 bg-white/20 text-white text-xs font-bold px-4 py-1.5 rounded-full">
+          <i class="fas fa-folder-open"></i> Online E-Portfolio System
+        </div>
+      </div>
+
+      <!-- Tab switcher -->
+      <div class="flex border-b border-slate-200 bg-slate-50">
+        <button type="button" id="tab-staff-btn"
+          onclick="switchTab('staff')"
+          class="flex-1 py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-all border-b-2
+                 {% if active_tab != 'trainee' %}border-indigo-600 text-indigo-700 bg-white{% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}">
+          <i class="fas fa-user-tie"></i> Staff Login
+        </button>
+        <button type="button" id="tab-trainee-btn"
+          onclick="switchTab('trainee')"
+          class="flex-1 py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-all border-b-2
+                 {% if active_tab == 'trainee' %}border-indigo-600 text-indigo-700 bg-white{% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}">
+          <i class="fas fa-user-graduate"></i> Trainee Login
+        </button>
+      </div>
+
+      <div class="p-8">
+
+        <!-- ── STAFF FORM ── -->
+        <div id="form-staff" {% if active_tab == 'trainee' %}class="hidden"{% endif %}>
+          <p class="text-xs text-slate-500 mb-5">
+            For <strong>Super Admins, Department Admins</strong> and <strong>Trainers</strong>
+          </p>
+          <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-5">
+            <input type="hidden" name="login_type" value="staff">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Email Address</label>
+              <div class="relative">
+                <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="email" name="email" required autocomplete="email"
+                  class="w-full pl-11 pr-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors bg-slate-50 focus:bg-white text-sm"
+                  placeholder="your@email.com">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Password</label>
+              <div class="relative">
+                <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="password" name="password" id="staff-pw" required autocomplete="current-password"
+                  class="w-full pl-11 pr-12 py-3.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors bg-slate-50 focus:bg-white text-sm"
+                  placeholder="••••••••">
+                <button type="button" onclick="togglePw('staff-pw','staff-pw-icon')"
+                  class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <i class="fas fa-eye text-sm" id="staff-pw-icon"></i>
+                </button>
+              </div>
+            </div>
+            <button type="submit"
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 text-sm">
+              <i class="fas fa-sign-in-alt mr-2"></i> Sign In as Staff
+            </button>
+          </form>
+        </div>
+
+        <!-- ── TRAINEE FORM ── -->
+        <div id="form-trainee" {% if active_tab != 'trainee' %}class="hidden"{% endif %}>
+          <p class="text-xs text-slate-500 mb-5">
+            For <strong>Trainees</strong> — use your 5-digit admission number
+          </p>
+          <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-5">
+            <input type="hidden" name="login_type" value="trainee">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Admission Number</label>
+              <div class="relative">
+                <i class="fas fa-id-card absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" name="admission_no" required
+                  maxlength="5" pattern="\d{5}" inputmode="numeric"
+                  class="w-full pl-11 pr-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors bg-slate-50 focus:bg-white text-sm font-mono tracking-widest"
+                  placeholder="12345"
+                  oninput="this.value=this.value.replace(/\D/g,'')">
+              </div>
+              <p class="text-xs text-slate-400 mt-1.5">Enter your 5-digit admission number</p>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Password</label>
+              <div class="relative">
+                <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="password" name="password" id="trainee-pw" required autocomplete="current-password"
+                  class="w-full pl-11 pr-12 py-3.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors bg-slate-50 focus:bg-white text-sm"
+                  placeholder="••••••••">
+                <button type="button" onclick="togglePw('trainee-pw','trainee-pw-icon')"
+                  class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <i class="fas fa-eye text-sm" id="trainee-pw-icon"></i>
+                </button>
+              </div>
+            </div>
+            <button type="submit"
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 text-sm">
+              <i class="fas fa-sign-in-alt mr-2"></i> Sign In as Trainee
+            </button>
+          </form>
+        </div>
+
+        <!-- Info note -->
+        <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <p class="text-xs text-amber-800 font-semibold">
+            <i class="fas fa-info-circle mr-1"></i>
+            Contact your Department Administrator if you need login credentials or have forgotten your password.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-center text-indigo-200/70 text-xs mt-6">
+      &copy; {{ now.year if now else 2026 }} Thika Technical Training Institute. All rights reserved.
+    </p>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  var isTrainee = tab === 'trainee';
+
+  document.getElementById('form-staff').classList.toggle('hidden', isTrainee);
+  document.getElementById('form-trainee').classList.toggle('hidden', !isTrainee);
+
+  var activeClass   = 'border-indigo-600 text-indigo-700 bg-white border-b-2';
+  var inactiveClass = 'border-transparent text-slate-500 hover:text-slate-700 border-b-2';
+
+  document.getElementById('tab-staff-btn').className =
+    'flex-1 py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-all ' +
+    (isTrainee ? inactiveClass : activeClass);
+  document.getElementById('tab-trainee-btn').className =
+    'flex-1 py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-all ' +
+    (isTrainee ? activeClass : inactiveClass);
+}
+
+function togglePw(inputId, iconId) {
+  var inp  = document.getElementById(inputId);
+  var icon = document.getElementById(iconId);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'fas fa-eye-slash text-sm';
+  } else {
+    inp.type = 'password';
+    icon.className = 'fas fa-eye text-sm';
+  }
+}
+</script>
+{% endblock %}

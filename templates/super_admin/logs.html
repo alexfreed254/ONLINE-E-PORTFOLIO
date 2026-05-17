@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}System Logs{% endblock %}
+{% block page_title %}System Logs{% endblock %}
+{% block page_subtitle %}Full audit trail of all system activity{% endblock %}
+{% block content %}
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+  <div class="flex items-center justify-between mb-5">
+    <h3 class="text-lg font-bold text-slate-800">
+      System Logs — {{ total }} total entries
+    </h3>
+    <form method="POST" action="{{ url_for('super_admin.clear_logs') }}"
+      onsubmit="return confirm('Clear ALL system logs? This cannot be undone.')">
+      <button type="submit" class="bg-red-50 text-red-700 hover:bg-red-100 text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+        <i class="fas fa-trash-alt mr-1"></i> Clear All Logs
+      </button>
+    </form>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b-2 border-slate-100">
+          <th class="text-left py-3 px-3 text-xs font-bold text-slate-400 uppercase">Timestamp</th>
+          <th class="text-left py-3 px-3 text-xs font-bold text-slate-400 uppercase">User</th>
+          <th class="text-left py-3 px-3 text-xs font-bold text-slate-400 uppercase">Action</th>
+          <th class="text-left py-3 px-3 text-xs font-bold text-slate-400 uppercase">Entity</th>
+          <th class="text-left py-3 px-3 text-xs font-bold text-slate-400 uppercase">Detail</th>
+          <th class="text-left py-3 px-3 text-xs font-bold text-slate-400 uppercase">IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr class="border-b border-slate-50 hover:bg-slate-50">
+          <td class="py-2.5 px-3 text-xs text-slate-400 whitespace-nowrap font-mono">
+            {{ log.created_at[:19].replace('T',' ') if log.created_at else '—' }}
+          </td>
+          <td class="py-2.5 px-3">
+            <p class="font-semibold text-slate-700 text-xs">{{ log.users.full_name if log.users else 'System' }}</p>
+            {% if log.users %}
+            <p class="text-xs text-slate-400 capitalize">{{ log.users.role.replace('_',' ') }}</p>
+            {% endif %}
+          </td>
+          <td class="py-2.5 px-3">
+            <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-md">{{ log.action }}</span>
+          </td>
+          <td class="py-2.5 px-3 text-xs text-slate-500">{{ log.entity or '—' }}</td>
+          <td class="py-2.5 px-3 text-xs text-slate-500 max-w-xs truncate" title="{{ log.detail }}">{{ log.detail or '—' }}</td>
+          <td class="py-2.5 px-3 text-xs text-slate-400 font-mono">{{ log.ip_address or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="py-10 text-center text-slate-400 text-sm">No logs found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pages > 1 %}
+  <div class="flex items-center justify-center gap-2 mt-6">
+    {% if page > 1 %}
+    <a href="{{ url_for('super_admin.logs', page=page-1) }}"
+      class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200">← Prev</a>
+    {% endif %}
+    <span class="text-sm text-slate-500">Page {{ page }} of {{ pages }}</span>
+    {% if page < pages %}
+    <a href="{{ url_for('super_admin.logs', page=page+1) }}"
+      class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
