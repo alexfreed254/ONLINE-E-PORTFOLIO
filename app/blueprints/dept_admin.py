@@ -50,14 +50,13 @@ def dashboard():
         stats['trainees'] = len(q_trainees.execute().data or [])
 
         # Count units via courses in this department
+        course_ids = []
         if dep_id:
             course_ids = [c['id'] for c in
                           db.table('courses').select('id').eq('department_id', dep_id).execute().data or []]
-            if course_ids:
-                stats['units'] = len(
-                    db.table('units').select('id').in_('course_id', course_ids).execute().data or [])
-            else:
-                stats['units'] = 0
+        if course_ids:
+            stats['units'] = len(
+                db.table('units').select('id').in_('course_id', course_ids).execute().data or [])
         else:
             stats['units'] = len(db.table('units').select('id').execute().data or [])
 
@@ -69,9 +68,16 @@ def dashboard():
         for a in recent:
             ev = db.table('evidence').select('id').eq('assessment_id', a['id']).execute().data or []
             a['evidence_count'] = len(ev)
+            from app.utils import get_storage_public_url, STORAGE_BUCKET_SCRIPTS
+            a['script_url'] = get_storage_public_url(STORAGE_BUCKET_SCRIPTS, a.get('script_file_path', ''))
 
         # Units list for CSV download
-        if dep_id and course_ids:
+        course_ids = []
+        if dep_id:
+            course_ids = [c['id'] for c in
+                          db.table('courses').select('id').eq('department_id', dep_id).execute().data or []]
+
+        if course_ids:
             units_list = (db.table('units').select('id, name')
                           .in_('course_id', course_ids).order('name').execute().data or [])
         else:
@@ -432,3 +438,23 @@ def api_class_units(class_id):
     rows = (db.table('class_units').select('units(id, name)')
             .eq('class_id', class_id).execute().data or [])
     return jsonify({'units': [r['units'] for r in rows if r.get('units')]})
+
+
+# ─────────────────────────────────────────────────────────────
+# API: evidence for an assessment (dashboard modal)
+# ─────────────────────────────────────────────────────────────
+@dept_admin_bp.route('/api/assessment/<assessment_id>/evidence')
+@login_required
+@dept_admin_required
+def api_assessment_evidence(assessment_id):
+    from app.utils import get_storage_public_url, STORAGE_BUCKET_EVIDENCE
+    db = get_db()
+    try:
+        evidence = (db.table('evidence').select('*')
+                    .eq('assessment_id', assessment_id)
+                    .order('uploaded_at').execute().data or [])
+        for ev in evidence:
+            ev['url'] = get_storage_public_url(STORAGE_BUCKET_EVIDENCE, ev.get('file_path', ''))
+        return jsonify({'success': True, 'evidence': evidence})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

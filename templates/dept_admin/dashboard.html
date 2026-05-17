@@ -1,32 +1,86 @@
 {% extends 'base.html' %}
 {% block title %}Dept Admin Dashboard{% endblock %}
 {% block page_title %}Department Admin Dashboard{% endblock %}
+{% block page_subtitle %}{{ current_user.full_name }} — Department Overview{% endblock %}
+{% block sidebar_color %}bg-slate-900{% endblock %}
+
+{% block sidebar_stats %}
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ stats.classes }}</div>
+    <div class="sidebar-stat-lbl">Classes</div>
+  </div>
+  <i class="fas fa-chalkboard opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ stats.trainers }}</div>
+    <div class="sidebar-stat-lbl">Trainers</div>
+  </div>
+  <i class="fas fa-chalkboard-teacher opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ stats.trainees }}</div>
+    <div class="sidebar-stat-lbl">Trainees</div>
+  </div>
+  <i class="fas fa-user-graduate opacity-40 text-xl"></i>
+</div>
+{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{{ url_for('dept_admin.dashboard') }}" class="sidebar-link text-slate-100 active">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('dept_admin.courses') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-book w-5 text-center"></i> Courses
+</a>
+<a href="{{ url_for('dept_admin.units') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-list-check w-5 text-center"></i> Units
+</a>
+<a href="{{ url_for('dept_admin.classes') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-chalkboard w-5 text-center"></i> Classes
+</a>
+<a href="{{ url_for('dept_admin.trainers') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-chalkboard-teacher w-5 text-center"></i> Trainers
+</a>
+<a href="{{ url_for('dept_admin.trainees') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-user-graduate w-5 text-center"></i> Trainees
+</a>
+{% endblock %}
+
 {% block content %}
 <!-- Stats -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-  <div class="bg-white rounded-2xl p-6 border-l-4 border-violet-500 shadow-sm">
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-indigo-500 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Classes</p>
     <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.classes }}</p>
+    <i class="fas fa-chalkboard text-indigo-200 text-2xl mt-2"></i>
   </div>
-  <div class="bg-white rounded-2xl p-6 border-l-4 border-indigo-500 shadow-sm">
+  <div class="bg-white rounded-2xl p-6 border-l-4 border-slate-500 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Units</p>
     <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.units }}</p>
+    <i class="fas fa-list-check text-slate-200 text-2xl mt-2"></i>
   </div>
   <div class="bg-white rounded-2xl p-6 border-l-4 border-emerald-500 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Trainers</p>
     <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.trainers }}</p>
+    <i class="fas fa-chalkboard-teacher text-emerald-200 text-2xl mt-2"></i>
   </div>
   <div class="bg-white rounded-2xl p-6 border-l-4 border-amber-500 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Trainees</p>
     <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.trainees }}</p>
+    <i class="fas fa-user-graduate text-amber-200 text-2xl mt-2"></i>
   </div>
 </div>
 
 <!-- Recent Assessments -->
-<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-  <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-    <i class="fas fa-clock text-violet-500"></i> Recent Submissions
-  </h3>
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+  <div class="flex items-center justify-between mb-5">
+    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+      <i class="fas fa-clock text-indigo-500"></i> Recent Submissions
+    </h3>
+  </div>
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
@@ -37,7 +91,7 @@
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Type</th>
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Status</th>
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Date</th>
-          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Actions</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Files</th>
         </tr>
       </thead>
       <tbody>
@@ -49,23 +103,28 @@
           </td>
           <td class="py-2 px-3 text-xs text-slate-500">{{ a.classes.name if a.classes else '—' }}</td>
           <td class="py-2 px-3 text-xs text-slate-500">{{ a.units.name if a.units else '—' }}</td>
-          <td class="py-2 px-3 text-xs font-bold text-slate-600">{{ a.assessment_type }}</td>
+          <td class="py-2 px-3">
+            <span class="bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-md">{{ a.assessment_type }}</span>
+          </td>
           <td class="py-2 px-3">
             <span class="pill {% if a.status=='approved' %}badge-approved{% elif a.status=='rejected' %}badge-rejected{% else %}badge-pending{% endif %}">
               {{ a.status.capitalize() }}
             </span>
           </td>
-          <td class="py-2 px-3 text-xs text-slate-400">{{ a.uploaded_at[:10] if a.uploaded_at else '—' }}</td>
+          <td class="py-2 px-3 text-xs text-slate-400 whitespace-nowrap">
+            {{ a.uploaded_at[:10] if a.uploaded_at else '—' }}
+          </td>
           <td class="py-2 px-3">
             <div class="flex items-center gap-1.5">
-              {% if a.script_file_path %}
-              <a href="{{ storage_url(BUCKET_SCRIPTS, a.script_file_path) }}" target="_blank" title="View PDF Script"
+              {% if a.script_url %}
+              <a href="{{ a.script_url }}" target="_blank"
                 class="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-md transition-colors flex items-center gap-1">
                 <i class="fas fa-file-pdf"></i> PDF
               </a>
               {% endif %}
               {% if a.evidence_count > 0 %}
-              <button onclick="viewEvidence('{{ a.id }}')" title="Evidence files" class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 text-xs font-bold rounded-md transition-colors cursor-pointer">
+              <button onclick="viewEvidence('{{ a.id }}')"
+                class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 text-xs font-bold rounded-md transition-colors cursor-pointer">
                 <i class="fas fa-images"></i> {{ a.evidence_count }}
               </button>
               {% endif %}
@@ -73,52 +132,50 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="py-8 text-center text-slate-400 text-sm">No submissions yet.</td></tr>
+        <tr><td colspan="7" class="py-8 text-center text-slate-400 text-sm">No submissions yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
- 
-<!-- Units List -->
-<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
+
+<!-- Units CSV Downloads -->
+{% if units_list %}
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
   <div class="flex items-center justify-between mb-4">
-    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-      <i class="fas fa-book text-indigo-500"></i> Units
+    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+      <i class="fas fa-book text-indigo-500"></i> Units — Download CSV Reports
     </h3>
-    <span class="text-xs text-slate-400">Download CSV per unit</span>
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     {% for u in units_list %}
-    <div class="p-4 border rounded-xl flex items-center justify-between">
-      <div>
-        <p class="font-semibold text-slate-800 text-sm truncate">{{ u.name }}</p>
-      </div>
-      <div>
-        <a href="{{ url_for('dept_admin.download_unit_report', unit_id=u.id) }}" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold">
-          <i class="fas fa-download mr-1"></i> Download
-        </a>
-      </div>
+    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl">
+      <p class="font-semibold text-slate-700 text-sm truncate flex-1 mr-2">{{ u.name }}</p>
+      <a href="{{ url_for('dept_admin.download_unit_report', unit_id=u.id) }}"
+        class="flex-shrink-0 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors">
+        <i class="fas fa-download mr-1"></i> CSV
+      </a>
     </div>
-    {% else %}
-    <div class="col-span-3 py-8 text-center text-slate-400">No units found.</div>
     {% endfor %}
   </div>
 </div>
+{% endif %}
 
 <!-- Evidence Modal -->
-<div id="evidenceModal" style="display:none;" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-    <div class="sticky top-0 bg-white border-b border-slate-100 p-6 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-slate-800">Assessment Evidence</h2>
-      <button onclick="closeEvidence()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+<div id="evidenceModal" style="display:none;"
+  class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+  onclick="if(event.target===this)closeEvidence()">
+  <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+    <div class="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+      <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+        <i class="fas fa-images text-purple-500"></i> Assessment Evidence
+      </h2>
+      <button onclick="closeEvidence()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
     </div>
     <div id="evidenceContent" class="p-6">
-      <div class="text-center text-slate-400">
-        <div class="inline-block animate-spin">
-          <i class="fas fa-spinner text-2xl"></i>
-        </div>
-        <p class="mt-2">Loading evidence files...</p>
+      <div class="text-center text-slate-400 py-8">
+        <i class="fas fa-spinner fa-spin text-2xl block mb-2"></i>
+        <p class="text-sm">Loading evidence files...</p>
       </div>
     </div>
   </div>
@@ -126,58 +183,47 @@
 
 <script>
 function viewEvidence(assessmentId) {
-  const modal = document.getElementById('evidenceModal');
-  const content = document.getElementById('evidenceContent');
+  var modal   = document.getElementById('evidenceModal');
+  var content = document.getElementById('evidenceContent');
   modal.style.display = 'flex';
-  
-  fetch(`{{ url_for('dept_admin.api_assessment_evidence', assessment_id='') }}${assessmentId}`)
-    .then(r => r.json())
-    .then(data => {
+  content.innerHTML = '<div class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin text-2xl block mb-2"></i><p class="text-sm">Loading...</p></div>';
+
+  fetch('/dept-admin/api/assessment/' + assessmentId + '/evidence')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
       if (!data.success) {
-        content.innerHTML = `<div class="text-red-600 text-center">Error loading evidence: ${data.error}</div>`;
+        content.innerHTML = '<div class="text-red-600 text-center py-6">Error: ' + data.error + '</div>';
         return;
       }
-      
       if (data.evidence.length === 0) {
-        content.innerHTML = '<div class="text-center text-slate-400"><i class="fas fa-images text-4xl mb-2 block"></i><p>No evidence files uploaded.</p></div>';
+        content.innerHTML = '<div class="text-center text-slate-400 py-10"><i class="fas fa-images text-4xl mb-3 block"></i><p>No evidence files uploaded.</p></div>';
         return;
       }
-      
-      let html = '<div class="space-y-4">';
-      data.evidence.forEach(ev => {
-        const isPhoto = ev.file_type === 'photo';
-        html += `
-          <div class="border border-slate-100 rounded-xl overflow-hidden">
-            ${isPhoto ? 
-              `<a href="${ev.url}" target="_blank"><img src="${ev.url}" alt="${ev.file_name}" class="w-full h-auto hover:opacity-90 transition-opacity"></a>` :
-              `<div class="bg-slate-800 p-8 flex items-center justify-center"><a href="${ev.url}" target="_blank" class="text-white text-center"><i class="fas fa-play-circle text-4xl mb-2 block"></i><p class="text-sm">Play Video</p></a></div>`
-            }
-            <div class="p-3 bg-slate-50">
-              <p class="text-sm font-semibold text-slate-700 truncate">${ev.file_name}</p>
-              ${ev.caption ? `<p class="text-xs text-slate-500 mt-1 italic">${ev.caption}</p>` : ''}
-              <p class="text-xs text-slate-400 mt-1">${new Date(ev.uploaded_at).toLocaleDateString()}</p>
-            </div>
-          </div>
-        `;
+      var html = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
+      data.evidence.forEach(function(ev) {
+        var isPhoto = ev.file_type === 'photo';
+        html += '<div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm">';
+        if (isPhoto) {
+          html += '<a href="' + ev.url + '" target="_blank"><img src="' + ev.url + '" alt="' + ev.file_name + '" class="w-full h-40 object-cover hover:opacity-90 transition-opacity"></a>';
+        } else {
+          html += '<div class="bg-slate-800 h-40 flex items-center justify-center"><a href="' + ev.url + '" target="_blank" class="text-white text-center"><i class="fas fa-play-circle text-4xl mb-1 block opacity-80"></i><p class="text-xs">Play Video</p></a></div>';
+        }
+        html += '<div class="p-3 bg-slate-50">';
+        html += '<p class="text-xs font-semibold text-slate-700 truncate">' + ev.file_name + '</p>';
+        if (ev.caption) html += '<p class="text-xs text-slate-500 mt-0.5 italic">' + ev.caption + '</p>';
+        html += '<p class="text-xs text-slate-400 mt-1">' + new Date(ev.uploaded_at).toLocaleDateString() + '</p>';
+        html += '</div></div>';
       });
       html += '</div>';
       content.innerHTML = html;
     })
-    .catch(e => {
-      content.innerHTML = `<div class="text-red-600 text-center">Error: ${e.message}</div>`;
+    .catch(function(e) {
+      content.innerHTML = '<div class="text-red-600 text-center py-6">Error: ' + e.message + '</div>';
     });
 }
 
 function closeEvidence() {
   document.getElementById('evidenceModal').style.display = 'none';
 }
-
-// Close modal when clicking outside
-document.addEventListener('click', (e) => {
-  const modal = document.getElementById('evidenceModal');
-  if (e.target === modal) {
-    closeEvidence();
-  }
-});
 </script>
 {% endblock %}
