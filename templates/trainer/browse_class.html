@@ -2,9 +2,23 @@
 {% block title %}{{ cls.name }} — Units{% endblock %}
 {% block page_title %}{{ cls.name }}{% endblock %}
 {% block page_subtitle %}Select a unit to view assessments{% endblock %}
+{% block sidebar_color %}bg-emerald-800{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{{ url_for('trainer.dashboard') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('trainer.browse') }}" class="sidebar-link text-emerald-100 active">
+  <i class="fas fa-folder-tree w-5 text-center"></i> Browse
+</a>
+<a href="{{ url_for('trainer.search') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-search w-5 text-center"></i> Search
+</a>
+{% endblock %}
+
 {% block content %}
 <!-- Breadcrumb -->
-<div class="flex items-center gap-2 text-xs mb-6 text-slate-500">
+<div class="flex items-center gap-2 text-xs mb-6 text-slate-500 flex-wrap">
   <a href="{{ url_for('trainer.browse') }}" class="text-emerald-600 font-bold hover:underline">
     <i class="fas fa-home mr-1"></i>All Classes
   </a>
@@ -12,40 +26,35 @@
   <span class="font-bold text-slate-700">{{ cls.name }}</span>
 </div>
 
+{% if not units %}
+<div class="py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-100">
+  <i class="fas fa-folder-open text-4xl mb-3 block"></i>
+  <p class="font-semibold">No units assigned to you for this class.</p>
+  <p class="text-sm mt-1">Contact your Department Admin to assign units.</p>
+</div>
+{% else %}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
   {% for unit in units %}
   <a href="{{ url_for('trainer.browse_unit', class_id=cls.id, unit_id=unit.id) }}"
     class="bg-white rounded-2xl p-5 border-2 border-slate-100 hover:border-emerald-400 hover:shadow-lg transition-all group">
     <div class="flex items-center gap-3 mb-3">
-      <div class="w-11 h-11 bg-violet-100 rounded-xl flex items-center justify-center">
+      <div class="w-11 h-11 bg-violet-100 rounded-xl flex items-center justify-center flex-shrink-0">
         <i class="fas fa-folder text-violet-600 text-lg"></i>
       </div>
       <div class="flex-1 overflow-hidden">
         <p class="font-bold text-slate-800 text-sm truncate">{{ unit.name }}</p>
-        <p class="text-xs text-slate-400">{{ unit.total }} file(s)</p>
+        <p class="text-xs text-slate-400">{{ unit.total }} submission(s)</p>
       </div>
-      <i class="fas fa-chevron-right text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
+      <i class="fas fa-chevron-right text-slate-300 group-hover:text-emerald-500 transition-colors flex-shrink-0"></i>
     </div>
     <div class="flex gap-2 flex-wrap">
-      {% if unit.approved %}
-      <span class="pill badge-approved"><i class="fas fa-check-circle"></i> {{ unit.approved }}</span>
-      {% endif %}
-      {% if unit.pending %}
-      <span class="pill badge-pending"><i class="fas fa-clock"></i> {{ unit.pending }}</span>
-      {% endif %}
-      {% if unit.rejected %}
-      <span class="pill badge-rejected"><i class="fas fa-times-circle"></i> {{ unit.rejected }}</span>
-      {% endif %}
-      {% if unit.total == 0 %}
-      <span class="text-xs text-slate-400">No submissions</span>
-      {% endif %}
+      {% if unit.approved %}<span class="pill badge-approved"><i class="fas fa-check-circle"></i> {{ unit.approved }}</span>{% endif %}
+      {% if unit.pending  %}<span class="pill badge-pending"><i class="fas fa-clock"></i> {{ unit.pending }}</span>{% endif %}
+      {% if unit.rejected %}<span class="pill badge-rejected"><i class="fas fa-times-circle"></i> {{ unit.rejected }}</span>{% endif %}
+      {% if unit.total == 0 %}<span class="text-xs text-slate-400">No submissions</span>{% endif %}
     </div>
   </a>
-  {% else %}
-  <div class="col-span-3 py-16 text-center text-slate-400">
-    <i class="fas fa-folder-open text-4xl mb-3 block"></i>
-    <p class="font-semibold">No units assigned to this class.</p>
-  </div>
   {% endfor %}
 </div>
+{% endif %}
 {% endblock %}

@@ -1,10 +1,24 @@
 {% extends 'base.html' %}
-{% block title %}Assessment Detail{% endblock %}
+{% block title %}Assessment Review{% endblock %}
 {% block page_title %}Assessment Review{% endblock %}
+{% block sidebar_color %}bg-emerald-800{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{{ url_for('trainer.dashboard') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('trainer.browse') }}" class="sidebar-link text-emerald-100 active">
+  <i class="fas fa-folder-tree w-5 text-center"></i> Browse
+</a>
+<a href="{{ url_for('trainer.search') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-search w-5 text-center"></i> Search
+</a>
+{% endblock %}
+
 {% block content %}
 <div class="grid lg:grid-cols-3 gap-6">
 
-  <!-- Left: Assessment Info -->
+  <!-- ── Left: Info + Evidence ── -->
   <div class="lg:col-span-2 space-y-5">
 
     <!-- Script Card -->
@@ -14,9 +28,14 @@
           <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
         </div>
         <div class="flex-1">
-          <h2 class="text-lg font-bold text-slate-800 break-words">{{ assessment.script_file_name or 'Assessment Script' }}</h2>
+          <h2 class="text-lg font-bold text-slate-800 break-words leading-snug">
+            {{ assessment.script_file_name or 'Assessment Script' }}
+          </h2>
           <div class="flex flex-wrap gap-2 mt-2">
             <span class="pill {% if assessment.status=='approved' %}badge-approved{% elif assessment.status=='rejected' %}badge-rejected{% else %}badge-pending{% endif %}">
+              {% if assessment.status=='approved' %}<i class="fas fa-check-circle"></i>
+              {% elif assessment.status=='rejected' %}<i class="fas fa-times-circle"></i>
+              {% else %}<i class="fas fa-clock"></i>{% endif %}
               {{ assessment.status.capitalize() }}
             </span>
             <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold">{{ assessment.assessment_type }}</span>
@@ -25,12 +44,12 @@
         </div>
       </div>
 
-      <!-- Metadata grid -->
+      <!-- Metadata -->
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-5 pt-5 border-t border-slate-100">
         <div>
           <p class="text-xs font-bold text-slate-400 uppercase">Trainee</p>
           <p class="font-semibold text-slate-800 text-sm mt-0.5">{{ assessment.users.full_name if assessment.users else '—' }}</p>
-          <p class="text-xs font-mono text-indigo-600">{{ assessment.users.admission_no if assessment.users else '' }}</p>
+          <p class="text-xs font-mono text-indigo-600 font-bold">{{ assessment.users.admission_no if assessment.users else '' }}</p>
         </div>
         <div>
           <p class="text-xs font-bold text-slate-400 uppercase">Class</p>
@@ -53,11 +72,15 @@
           <p class="font-semibold text-slate-800 text-sm mt-0.5">{{ assessment.uploaded_at[:10] if assessment.uploaded_at else '—' }}</p>
         </div>
         {% if reviewer %}
-        <div class="col-span-2">
+        <div class="col-span-2 md:col-span-3">
           <p class="text-xs font-bold text-slate-400 uppercase">Reviewed By</p>
-          <p class="font-semibold text-slate-800 text-sm mt-0.5">{{ reviewer }} on {{ assessment.reviewed_at[:10] if assessment.reviewed_at else '—' }}</p>
+          <p class="font-semibold text-slate-800 text-sm mt-0.5">
+            {{ reviewer }} &bull; {{ assessment.reviewed_at[:10] if assessment.reviewed_at else '—' }}
+          </p>
           {% if assessment.review_note %}
-          <p class="text-xs text-slate-500 mt-1 italic">"{{ assessment.review_note }}"</p>
+          <p class="text-xs text-slate-500 mt-1 italic bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+            "{{ assessment.review_note }}"
+          </p>
           {% endif %}
         </div>
         {% endif %}
@@ -67,29 +90,39 @@
     <!-- Evidence Gallery -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
       <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <i class="fas fa-images text-purple-500"></i> Evidence ({{ evidence|length }})
+        <i class="fas fa-images text-purple-500"></i>
+        Evidence
+        <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ evidence|length }}</span>
       </h3>
       {% if evidence %}
       <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
         {% for ev in evidence %}
-        <div class="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
+        <div class="rounded-xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm">
           {% if ev.file_type == 'photo' %}
-          <a href="{{ storage_url(BUCKET_EVIDENCE, ev.file_path) }}" target="_blank">
-            <img src="{{ storage_url(BUCKET_EVIDENCE, ev.file_path) }}" alt="{{ ev.file_name }}"
-              class="w-full h-32 object-cover hover:opacity-90 transition-opacity">
+          <a href="{{ ev.public_url }}" target="_blank" class="block">
+            <img src="{{ ev.public_url }}" alt="{{ ev.file_name }}"
+              class="w-full h-32 object-cover hover:opacity-90 transition-opacity"
+              onerror="this.parentElement.innerHTML='<div class=\'w-full h-32 bg-slate-200 flex items-center justify-center\'><i class=\'fas fa-image text-slate-400 text-2xl\'></i></div>'">
           </a>
           {% else %}
           <div class="w-full h-32 flex items-center justify-center bg-slate-800">
-            <a href="{{ storage_url(BUCKET_EVIDENCE, ev.file_path) }}" target="_blank" class="text-white text-center">
-              <i class="fas fa-play-circle text-4xl mb-1 block"></i>
-              <p class="text-xs">Play Video</p>
+            <a href="{{ ev.public_url }}" target="_blank" class="text-white text-center">
+              <i class="fas fa-play-circle text-4xl mb-1 block opacity-80 hover:opacity-100 transition-opacity"></i>
+              <p class="text-xs font-semibold">Play Video</p>
             </a>
           </div>
           {% endif %}
           <div class="p-2">
+            <div class="flex items-center gap-1 mb-1">
+              <span class="text-xs font-bold px-1.5 py-0.5 rounded-full
+                {% if ev.file_type == 'photo' %}bg-blue-100 text-blue-700{% else %}bg-orange-100 text-orange-700{% endif %}">
+                <i class="fas {% if ev.file_type == 'photo' %}fa-image{% else %}fa-video{% endif %} mr-0.5"></i>
+                {{ ev.file_type.capitalize() }}
+              </span>
+            </div>
             <p class="text-xs font-semibold text-slate-700 truncate">{{ ev.file_name }}</p>
             {% if ev.caption %}
-            <p class="text-xs text-slate-400 mt-0.5 italic">{{ ev.caption }}</p>
+            <p class="text-xs text-slate-400 mt-0.5 italic truncate">{{ ev.caption }}</p>
             {% endif %}
             <p class="text-xs text-slate-400">{{ format_bytes(ev.file_size or 0) }}</p>
           </div>
@@ -105,51 +138,75 @@
     </div>
   </div>
 
-  <!-- Right: Actions -->
+  <!-- ── Right: Actions ── -->
   <div class="space-y-4">
 
     <!-- View PDF -->
-    {% if assessment.script_file_path %}
+    {% if script_url %}
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-      <h3 class="text-sm font-bold text-slate-700 mb-3">Script Document</h3>
-      <a href="{{ storage_url(BUCKET_SCRIPTS, assessment.script_file_path) }}" target="_blank"
+      <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+        <i class="fas fa-file-pdf text-red-500"></i> Script Document
+      </h3>
+      <a href="{{ script_url }}" target="_blank"
         class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors text-sm">
         <i class="fas fa-eye"></i> View PDF Script
       </a>
     </div>
     {% endif %}
 
-    <!-- Approve / Reject -->
+    <!-- Approve / Reject (pending only) -->
     {% if assessment.status == 'pending' %}
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-      <h3 class="text-sm font-bold text-slate-700 mb-3">Review Decision</h3>
+      <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+        <i class="fas fa-gavel text-indigo-500"></i> Review Decision
+      </h3>
       <form method="POST" action="{{ url_for('trainer.approve_assessment', assessment_id=assessment.id) }}" class="mb-3">
         <textarea name="note" placeholder="Optional approval note..."
           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs mb-2 focus:outline-none focus:border-emerald-400 resize-none" rows="2"></textarea>
         <button type="submit"
-          class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors text-sm">
-          <i class="fas fa-check-circle mr-2"></i> Approve Assessment
+          class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2">
+          <i class="fas fa-check-circle"></i> Approve Assessment
         </button>
       </form>
       <form method="POST" action="{{ url_for('trainer.reject_assessment', assessment_id=assessment.id) }}">
         <textarea name="note" placeholder="Reason for rejection (required)..." required
           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs mb-2 focus:outline-none focus:border-red-400 resize-none" rows="2"></textarea>
         <button type="submit"
-          class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors text-sm">
-          <i class="fas fa-times-circle mr-2"></i> Reject Assessment
+          class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2">
+          <i class="fas fa-times-circle"></i> Reject Assessment
         </button>
       </form>
     </div>
     {% endif %}
 
-    <!-- Delete -->
+    <!-- Status badge (already reviewed) -->
+    {% if assessment.status != 'pending' %}
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-      <h3 class="text-sm font-bold text-slate-700 mb-3">Danger Zone</h3>
+      <h3 class="text-sm font-bold text-slate-700 mb-3">Review Status</h3>
+      <div class="p-3 rounded-xl {% if assessment.status=='approved' %}bg-emerald-50 border border-emerald-200{% else %}bg-red-50 border border-red-200{% endif %}">
+        <p class="text-sm font-bold {% if assessment.status=='approved' %}text-emerald-700{% else %}text-red-700{% endif %}">
+          <i class="fas {% if assessment.status=='approved' %}fa-check-circle{% else %}fa-times-circle{% endif %} mr-1"></i>
+          {{ assessment.status.capitalize() }} by {{ reviewer or 'Trainer' }}
+        </p>
+        {% if assessment.review_note %}
+        <p class="text-xs mt-1 {% if assessment.status=='approved' %}text-emerald-600{% else %}text-red-600{% endif %} italic">
+          "{{ assessment.review_note }}"
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Delete -->
+    <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-5">
+      <h3 class="text-sm font-bold text-red-700 mb-3 flex items-center gap-2">
+        <i class="fas fa-exclamation-triangle"></i> Danger Zone
+      </h3>
       <form method="POST" action="{{ url_for('trainer.delete_assessment', assessment_id=assessment.id) }}"
-        onsubmit="return confirm('Permanently delete this assessment and all its evidence?')">
+        onsubmit="return confirm('Permanently delete this assessment and ALL its evidence? This cannot be undone.')">
         <button type="submit"
-          class="w-full bg-slate-700 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-colors text-sm">
-          <i class="fas fa-trash-alt mr-2"></i> Delete Assessment
+          class="w-full bg-slate-700 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2">
+          <i class="fas fa-trash-alt"></i> Delete Assessment
         </button>
       </form>
     </div>

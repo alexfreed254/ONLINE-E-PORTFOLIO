@@ -1,13 +1,29 @@
 {% extends 'base.html' %}
 {% block title %}Search Assessments{% endblock %}
 {% block page_title %}Advanced Search{% endblock %}
+{% block page_subtitle %}Filter assessments across your assigned units{% endblock %}
+{% block sidebar_color %}bg-emerald-800{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{{ url_for('trainer.dashboard') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('trainer.browse') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-folder-tree w-5 text-center"></i> Browse
+</a>
+<a href="{{ url_for('trainer.search') }}" class="sidebar-link text-emerald-100 active">
+  <i class="fas fa-search w-5 text-center"></i> Search
+</a>
+{% endblock %}
+
 {% block content %}
 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-5">
     <div>
       <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Admission No</label>
       <input type="text" id="f-adm" maxlength="5" placeholder="12345"
-        class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-none text-sm">
+        class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-none text-sm"
+        oninput="this.value=this.value.replace(/\D/g,'')">
     </div>
     <div>
       <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Class</label>
@@ -21,7 +37,7 @@
     <div>
       <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Unit</label>
       <select id="f-unit" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-none text-sm">
-        <option value="">All Units</option>
+        <option value="">All My Units</option>
         {% for u in units %}
         <option value="{{ u.id }}">{{ u.name }}</option>
         {% endfor %}
@@ -38,7 +54,7 @@
     </div>
     <div>
       <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Year</label>
-      <input type="number" id="f-year" placeholder="2024"
+      <input type="number" id="f-year" placeholder="{{ now.year }}"
         class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-none text-sm">
     </div>
   </div>
@@ -48,10 +64,9 @@
   </button>
 </div>
 
-<!-- Results -->
 <div id="results-count" class="hidden mb-3 text-sm font-bold text-slate-600"></div>
 <div id="results" class="space-y-3">
-  <div class="py-12 text-center text-slate-400">
+  <div class="py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-100">
     <i class="fas fa-search text-3xl mb-3 block"></i>
     <p class="text-sm">Set filters above and click Search.</p>
   </div>
@@ -60,7 +75,7 @@
 <script>
 function doSearch() {
   var params = new URLSearchParams({
-    adm:     document.getElementById('f-adm').value.trim(),
+    adm:      document.getElementById('f-adm').value.trim(),
     class_id: document.getElementById('f-class').value,
     unit_id:  document.getElementById('f-unit').value,
     status:   document.getElementById('f-status').value,
@@ -68,7 +83,7 @@ function doSearch() {
   });
   var res = document.getElementById('results');
   var cnt = document.getElementById('results-count');
-  res.innerHTML = '<div class="py-10 text-center text-slate-400"><i class="fas fa-spinner fa-spin text-2xl"></i></div>';
+  res.innerHTML = '<div class="py-10 text-center text-slate-400"><i class="fas fa-spinner fa-spin text-2xl"></i><p class="mt-2 text-sm">Searching...</p></div>';
   cnt.classList.add('hidden');
 
   fetch('/trainer/search/results?' + params.toString())
@@ -81,28 +96,31 @@ function doSearch() {
         return;
       }
       res.innerHTML = data.assessments.map(function(a) {
-        var statusClass = a.status === 'approved' ? 'badge-approved' : a.status === 'rejected' ? 'badge-rejected' : 'badge-pending';
-        var statusIcon  = a.status === 'approved' ? 'fa-check-circle' : a.status === 'rejected' ? 'fa-times-circle' : 'fa-clock';
-        var approveBtn = a.status === 'pending'
-          ? '<form method="POST" action="/trainer/assessment/' + a.id + '/approve" class="inline"><button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg">Approve</button></form>'
-          + '<form method="POST" action="/trainer/assessment/' + a.id + '/reject" class="inline"><button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg">Reject</button></form>'
-          : '';
+        var sc = a.status === 'approved' ? 'badge-approved' : a.status === 'rejected' ? 'badge-rejected' : 'badge-pending';
+        var si = a.status === 'approved' ? 'fa-check-circle' : a.status === 'rejected' ? 'fa-times-circle' : 'fa-clock';
+        var btns = '';
+        if (a.status === 'pending') {
+          btns += '<form method="POST" action="/trainer/assessment/' + a.id + '/approve" class="inline">'
+                + '<button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg">Approve</button></form> ';
+          btns += '<form method="POST" action="/trainer/assessment/' + a.id + '/reject" class="inline">'
+                + '<button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg">Reject</button></form>';
+        }
         return '<div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex items-start gap-4">'
           + '<div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0"><i class="fas fa-file-pdf text-red-500"></i></div>'
           + '<div class="flex-1 overflow-hidden">'
           + '<p class="font-bold text-slate-800 text-sm break-words">' + (a.script_file_name || 'Assessment') + '</p>'
           + '<div class="flex gap-2 mt-1.5 flex-wrap">'
-          + '<span class="pill ' + statusClass + '"><i class="fas ' + statusIcon + '"></i> ' + a.status + '</span>'
-          + '<span class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">ADM: ' + (a.users ? a.users.admission_no : '—') + '</span>'
+          + '<span class="pill ' + sc + '"><i class="fas ' + si + '"></i> ' + a.status + '</span>'
+          + '<span class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md font-bold">ADM: ' + (a.users ? a.users.admission_no : '—') + '</span>'
+          + '<span class="text-xs text-slate-500 font-semibold">' + (a.users ? a.users.full_name : '') + '</span>'
           + '<span class="text-xs text-slate-400">' + (a.script_file_size_fmt || '') + '</span>'
           + '</div>'
-          + '<p class="text-xs text-slate-400 mt-1">' + (a.users ? a.users.full_name : '—') + ' &bull; ' + a.assessment_type + ' #' + a.assessment_no + ' &bull; T' + a.term + '/C' + a.cycle + '/' + a.year + '</p>'
+          + '<p class="text-xs text-slate-400 mt-1">' + a.assessment_type + ' #' + a.assessment_no + ' &bull; T' + a.term + '/C' + a.cycle + '/' + a.year + '</p>'
           + '</div>'
           + '<div class="flex gap-2 flex-shrink-0 flex-wrap">'
           + '<a href="/trainer/assessment/' + a.id + '" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg"><i class="fas fa-eye mr-1"></i>Review</a>'
-          + approveBtn
-          + '</div>'
-          + '</div>';
+          + btns
+          + '</div></div>';
       }).join('');
     })
     .catch(function(e) {

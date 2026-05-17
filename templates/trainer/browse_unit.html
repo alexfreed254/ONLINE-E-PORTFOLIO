@@ -2,9 +2,23 @@
 {% block title %}{{ unit.name }} — Files{% endblock %}
 {% block page_title %}{{ unit.name }}{% endblock %}
 {% block page_subtitle %}{{ cls.name }}{% endblock %}
+{% block sidebar_color %}bg-emerald-800{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{{ url_for('trainer.dashboard') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('trainer.browse') }}" class="sidebar-link text-emerald-100 active">
+  <i class="fas fa-folder-tree w-5 text-center"></i> Browse
+</a>
+<a href="{{ url_for('trainer.search') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-search w-5 text-center"></i> Search
+</a>
+{% endblock %}
+
 {% block content %}
 <!-- Breadcrumb -->
-<div class="flex items-center gap-2 text-xs mb-6 text-slate-500 flex-wrap">
+<div class="flex items-center gap-2 text-xs mb-5 text-slate-500 flex-wrap">
   <a href="{{ url_for('trainer.browse') }}" class="text-emerald-600 font-bold hover:underline">
     <i class="fas fa-home mr-1"></i>All Classes
   </a>
@@ -21,7 +35,7 @@
   {% for s, label in [('','All'),('pending','Pending'),('approved','Approved'),('rejected','Rejected')] %}
   <a href="{{ url_for('trainer.browse_unit', class_id=cls.id, unit_id=unit.id, status=s) }}"
     class="px-4 py-2 rounded-xl text-xs font-bold transition-all
-    {% if status_filter == s %}bg-emerald-600 text-white{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
+    {% if status_filter == s %}bg-emerald-600 text-white shadow-md{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
     {{ label }}
   </a>
   {% endfor %}
@@ -45,9 +59,10 @@
               {% else %}<i class="fas fa-clock"></i>{% endif %}
               {{ a.status.capitalize() }}
             </span>
-            <span class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+            <span class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md font-bold">
               ADM: {{ a.users.admission_no if a.users else '—' }}
             </span>
+            <span class="text-xs text-slate-500 font-semibold">{{ a.users.full_name if a.users else '—' }}</span>
             <span class="text-xs text-slate-400">{{ a.script_file_size_fmt }}</span>
             {% if a.evidence_count > 0 %}
             <span class="text-xs bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-md">
@@ -56,7 +71,6 @@
             {% endif %}
           </div>
           <p class="text-xs text-slate-400 mt-1">
-            {{ a.users.full_name if a.users else '—' }} &bull;
             {{ a.assessment_type }} #{{ a.assessment_no }} &bull;
             T{{ a.term }}/C{{ a.cycle }}/{{ a.year }} &bull;
             {{ a.uploaded_at[:10] if a.uploaded_at else '' }}
@@ -82,7 +96,7 @@
         </form>
         {% endif %}
         <form method="POST" action="{{ url_for('trainer.delete_assessment', assessment_id=a.id) }}"
-          onsubmit="return confirm('Permanently delete this assessment?')" class="inline">
+          onsubmit="return confirm('Permanently delete this assessment and all evidence?')" class="inline">
           <button type="submit" class="px-3 py-2 bg-slate-700 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors">
             <i class="fas fa-trash-alt"></i>
           </button>

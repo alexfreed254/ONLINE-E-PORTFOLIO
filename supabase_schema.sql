@@ -86,6 +86,17 @@ CREATE TABLE class_units (
 );
 
 -- ─────────────────────────────────────────────────────────────
+-- TRAINER ↔ UNIT  (which units each trainer is responsible for)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE trainer_units (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trainer_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    unit_id     UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(trainer_id, unit_id)
+);
+
+-- ─────────────────────────────────────────────────────────────
 -- TRAINEE ↔ CLASS  (enrollment)
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE enrollments (
@@ -162,6 +173,7 @@ CREATE TABLE system_logs (
 -- ─────────────────────────────────────────────────────────────
 -- ROW LEVEL SECURITY (basic — tighten per your policy)
 -- ─────────────────────────────────────────────────────────────
+ALTER TABLE trainer_units  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assessments  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE evidence     ENABLE ROW LEVEL SECURITY;

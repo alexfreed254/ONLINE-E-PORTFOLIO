@@ -1,36 +1,78 @@
 {% extends 'base.html' %}
 {% block title %}Trainer Dashboard{% endblock %}
 {% block page_title %}Trainer Dashboard{% endblock %}
+{% block page_subtitle %}Welcome, {{ current_user.full_name }}{% endblock %}
+{% block sidebar_color %}bg-emerald-800{% endblock %}
+
+{% block sidebar_stats %}
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-amber-300">{{ stats.pending }}</div>
+    <div class="sidebar-stat-lbl">Pending</div>
+  </div>
+  <i class="fas fa-clock opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-emerald-300">{{ stats.approved }}</div>
+    <div class="sidebar-stat-lbl">Approved</div>
+  </div>
+  <i class="fas fa-check-circle opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-red-300">{{ stats.rejected }}</div>
+    <div class="sidebar-stat-lbl">Rejected</div>
+  </div>
+  <i class="fas fa-times-circle opacity-40 text-xl"></i>
+</div>
+{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{{ url_for('trainer.dashboard') }}" class="sidebar-link text-emerald-100 active">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('trainer.browse') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-folder-tree w-5 text-center"></i> Browse
+</a>
+<a href="{{ url_for('trainer.search') }}" class="sidebar-link text-emerald-200">
+  <i class="fas fa-search w-5 text-center"></i> Search
+</a>
+{% endblock %}
+
 {% block content %}
 <!-- Stats -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
   <div class="bg-white rounded-2xl p-6 border-l-4 border-slate-400 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Total</p>
     <p class="text-3xl font-black text-slate-800 mt-1">{{ stats.total }}</p>
+    <i class="fas fa-file-alt text-slate-200 text-2xl mt-2"></i>
   </div>
   <div class="bg-white rounded-2xl p-6 border-l-4 border-amber-400 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Pending Review</p>
     <p class="text-3xl font-black text-amber-600 mt-1">{{ stats.pending }}</p>
+    <i class="fas fa-clock text-amber-200 text-2xl mt-2"></i>
   </div>
   <div class="bg-white rounded-2xl p-6 border-l-4 border-emerald-500 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Approved</p>
     <p class="text-3xl font-black text-emerald-600 mt-1">{{ stats.approved }}</p>
+    <i class="fas fa-check-circle text-emerald-200 text-2xl mt-2"></i>
   </div>
   <div class="bg-white rounded-2xl p-6 border-l-4 border-red-400 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Rejected</p>
     <p class="text-3xl font-black text-red-600 mt-1">{{ stats.rejected }}</p>
+    <i class="fas fa-times-circle text-red-200 text-2xl mt-2"></i>
   </div>
 </div>
 
 <!-- Pending Queue -->
-<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
   <div class="flex items-center justify-between mb-5">
     <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
       <i class="fas fa-clock text-amber-500"></i> Pending Review Queue
     </h3>
     <a href="{{ url_for('trainer.browse') }}" class="text-xs text-emerald-600 font-bold hover:underline">Browse All →</a>
   </div>
-
   {% if recent_pending %}
   <div class="space-y-3">
     {% for a in recent_pending %}
@@ -42,19 +84,17 @@
         <div class="overflow-hidden">
           <p class="font-bold text-slate-800 text-sm truncate">{{ a.script_file_name or 'Assessment' }}</p>
           <p class="text-xs text-slate-500">
-            <span class="font-mono text-indigo-600">{{ a.users.admission_no if a.users else '—' }}</span>
-            &bull; {{ a.classes.name if a.classes else '—' }}
+            <span class="font-mono text-indigo-600 font-bold">{{ a.users.admission_no if a.users else '—' }}</span>
+            &bull; {{ a.users.full_name if a.users else '—' }}
             &bull; {{ a.units.name if a.units else '—' }}
           </p>
           <p class="text-xs text-slate-400">{{ a.assessment_type }} #{{ a.assessment_no }} &bull; T{{ a.term }}/C{{ a.cycle }}/{{ a.year }}</p>
         </div>
       </div>
-      <div class="flex gap-2 flex-shrink-0 ml-3">
-        <a href="{{ url_for('trainer.assessment_detail', assessment_id=a.id) }}"
-          class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors">
-          <i class="fas fa-eye mr-1"></i> Review
-        </a>
-      </div>
+      <a href="{{ url_for('trainer.assessment_detail', assessment_id=a.id) }}"
+        class="flex-shrink-0 ml-3 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors">
+        <i class="fas fa-eye mr-1"></i> Review
+      </a>
     </div>
     {% endfor %}
   </div>
@@ -66,31 +106,23 @@
   {% endif %}
 </div>
 
-<!-- Units List (Quick Reports) -->
-<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
-  <div class="flex items-center justify-between mb-4">
-    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-      <i class="fas fa-book text-indigo-500"></i> Units (Quick Reports)
-    </h3>
-    <span class="text-xs text-slate-400">Download CSV per unit</span>
-  </div>
-
+<!-- My Units — Quick CSV Download -->
+{% if units_list %}
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+  <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+    <i class="fas fa-book text-indigo-500"></i> My Units — Download Reports
+  </h3>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     {% for u in units_list %}
-    <div class="p-4 border rounded-xl flex items-center justify-between">
-      <div>
-        <p class="font-semibold text-slate-800 text-sm truncate">{{ u.name }}</p>
-      </div>
-      <div>
-        <a href="{{ url_for('trainer.download_unit_report', unit_id=u.id) }}" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold">
-          <i class="fas fa-download mr-1"></i> Download
-        </a>
-      </div>
+    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl">
+      <p class="font-semibold text-slate-700 text-sm truncate flex-1 mr-2">{{ u.name }}</p>
+      <a href="{{ url_for('trainer.download_unit_report', unit_id=u.id) }}"
+        class="flex-shrink-0 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors">
+        <i class="fas fa-download mr-1"></i> CSV
+      </a>
     </div>
-    {% else %}
-    <div class="col-span-3 py-8 text-center text-slate-400">No units found.</div>
     {% endfor %}
   </div>
 </div>
+{% endif %}
 {% endblock %}
-

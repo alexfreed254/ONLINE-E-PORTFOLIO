@@ -3,8 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from functools import wraps
 from app.db import get_db
-from app.auth_service import create_staff_auth_user
-from app.utils import log_action, CLASSES_AND_UNITS, generate_unit_report_csv
+from app.utils import log_action, generate_unit_report_csv
 import secrets
 import string
 
@@ -33,26 +32,14 @@ def generate_temp_password(length=10):
 @login_required
 @dept_admin_required
 def dashboard():
-    db    = get_db()
+    db     = get_db()
     dep_id = str(current_user.department_id) if current_user.department_id else None
     stats  = {}
     try:
-        q_base = db.table('classes').select('id')
+        q_cls = db.table('classes').select('id')
         if dep_id:
-            q_base = q_base.eq('department_id', dep_id)
-        stats['classes']  = len(q_base.execute().data or [])
-
-        q_units = db.table('units').select('id, courses(department_id)')
-        # Units for this department (to allow CSV downloads per unit)
-        q_units = db.table('units').select('id, name')
-        if dep_id:
-            q_units = q_units.eq('department_id', dep_id)
-        units_data = q_units.execute().data or []
-        if dep_id:
-            stats['units'] = sum(1 for u in units_data
-                                 if u.get('courses', {}).get('department_id') == dep_id)
-        else:
-            stats['units'] = len(units_data)
+            q_cls = q_cls.eq('department_id', dep_id)
+        stats['classes'] = len(q_cls.execute().data or [])
 
         q_trainers = db.table('users').select('id').eq('role', 'trainer')
         q_trainees = db.table('users').select('id').eq('role', 'trainee')
@@ -62,43 +49,60 @@ def dashboard():
         stats['trainers'] = len(q_trainers.execute().data or [])
         stats['trainees'] = len(q_trainees.execute().data or [])
 
-        # Recent assessments
+        # Count units via courses in this department
+        if dep_id:
+            course_ids = [c['id'] for c in
+                          db.table('courses').select('id').eq('department_id', dep_id).execute().data or []]
+            if course_ids:
+                stats['units'] = len(
+                    db.table('units').select('id').in_('course_id', course_ids).execute().data or [])
+            else:
+                stats['units'] = 0
+        else:
+            stats['units'] = len(db.table('units').select('id').execute().data or [])
+
         recent = (db.table('assessments')
                   .select('*, users!assessments_trainee_id_fkey(full_name, admission_no), units(name), classes(name)')
                   .order('uploaded_at', desc=True)
                   .limit(10)
                   .execute().data or [])
-        units_list = q_units.order('name').execute().data or []
-        
-        # Add evidence count to each assessment
         for a in recent:
             ev = db.table('evidence').select('id').eq('assessment_id', a['id']).execute().data or []
             a['evidence_count'] = len(ev)
+
+        # Units list for CSV download
+        if dep_id and course_ids:
+            units_list = (db.table('units').select('id, name')
+                          .in_('course_id', course_ids).order('name').execute().data or [])
+        else:
+            units_list = db.table('units').select('id, name').order('name').execute().data or []
+
     except Exception as e:
         flash(f'Error: {e}', 'danger')
         recent = []
         units_list = []
 
-    return render_template('dept_admin/dashboard.html', stats=stats, recent=recent, units_list=units_list)
+    return render_template('dept_admin/dashboard.html',
+                           stats=stats, recent=recent, units_list=units_list)
 
 
 @dept_admin_bp.route('/download-unit-report/<unit_id>')
 @login_required
 @dept_admin_required
 def download_unit_report(unit_id):
-    """Department admin download CSV report for a unit."""
     from flask import make_response
     db = get_db()
     try:
-        csv_data = generate_unit_report_csv(unit_id, department_id=str(current_user.department_id) if current_user.department_id else None)
-        unit = db.table('units').select('name').eq('id', unit_id).single().execute().data
-        unit_name = unit['name'] if unit else 'Unit'
-        response = make_response(csv_data)
-        response.headers['Content-Disposition'] = f'attachment; filename="unit_report_{unit_name.replace(" ", "_")}.csv"'
-        response.headers['Content-type'] = 'text/csv'
-        return response
+        dep_id   = str(current_user.department_id) if current_user.department_id else None
+        csv_data = generate_unit_report_csv(unit_id, department_id=dep_id)
+        unit     = db.table('units').select('name').eq('id', unit_id).single().execute().data
+        name     = unit['name'].replace(' ', '_') if unit else 'Unit'
+        resp     = make_response(csv_data)
+        resp.headers['Content-Disposition'] = f'attachment; filename="report_{name}.csv"'
+        resp.headers['Content-type'] = 'text/csv'
+        return resp
     except Exception as e:
-        flash(f'Error generating report: {str(e)}', 'danger')
+        flash(f'Error: {e}', 'danger')
         return redirect(url_for('dept_admin.dashboard'))
 
 
@@ -215,14 +219,14 @@ def add_class():
         return redirect(url_for('dept_admin.classes'))
     try:
         db.table('classes').insert({
-            'name': name,
-            'course_id': course_id,
+            'name':         name,
+            'course_id':    course_id,
             'department_id': dep_id,
-            'intake_year': request.form.get('intake_year') or None,
+            'intake_year':  request.form.get('intake_year') or None,
             'intake_month': request.form.get('intake_month', '').strip() or None,
-            'level': request.form.get('level', '').strip() or None,
-            'cycle': request.form.get('cycle', '').strip() or None,
-            'created_by': str(current_user.id)
+            'level':        request.form.get('level', '').strip() or None,
+            'cycle':        request.form.get('cycle', '').strip() or None,
+            'created_by':   str(current_user.id)
         }).execute()
         log_action('CREATE_CLASS', 'class', None, name)
         flash(f'Class "{name}" created.', 'success')
@@ -235,7 +239,7 @@ def add_class():
 @login_required
 @dept_admin_required
 def class_units(class_id):
-    db = get_db()
+    db  = get_db()
     cls = db.table('classes').select('*, courses(name)').eq('id', class_id).single().execute().data
     if not cls:
         flash('Class not found.', 'danger')
@@ -243,7 +247,6 @@ def class_units(class_id):
 
     if request.method == 'POST':
         unit_ids = request.form.getlist('unit_ids')
-        # Remove existing, re-insert selected
         db.table('class_units').delete().eq('class_id', class_id).execute()
         for uid in unit_ids:
             try:
@@ -254,9 +257,9 @@ def class_units(class_id):
         flash('Class units updated.', 'success')
         return redirect(url_for('dept_admin.classes'))
 
-    all_units     = db.table('units').select('*').order('name').execute().data or []
-    assigned_ids  = [cu['unit_id'] for cu in
-                     db.table('class_units').select('unit_id').eq('class_id', class_id).execute().data or []]
+    all_units    = db.table('units').select('*').order('name').execute().data or []
+    assigned_ids = [cu['unit_id'] for cu in
+                    db.table('class_units').select('unit_id').eq('class_id', class_id).execute().data or []]
     return render_template('dept_admin/class_units.html',
                            cls=cls, all_units=all_units, assigned_ids=assigned_ids)
 
@@ -273,40 +276,70 @@ def trainers():
     q      = db.table('users').select('*, departments(name)').eq('role', 'trainer')
     if dep_id:
         q = q.eq('department_id', dep_id)
-    data = q.order('full_name').execute().data or []
-    deps = db.table('departments').select('*').order('name').execute().data or []
-    return render_template('dept_admin/trainers.html', trainers=data, departments=deps)
+    data  = q.order('full_name').execute().data or []
+    deps  = db.table('departments').select('*').order('name').execute().data or []
+    units = db.table('units').select('id, name').order('name').execute().data or []
+
+    # Attach assigned unit ids to each trainer
+    for t in data:
+        assigned = (db.table('trainer_units').select('unit_id')
+                    .eq('trainer_id', t['id']).execute().data or [])
+        t['assigned_unit_ids'] = [a['unit_id'] for a in assigned]
+
+    return render_template('dept_admin/trainers.html', trainers=data, departments=deps, units=units)
 
 
 @dept_admin_bp.route('/trainers/add', methods=['POST'])
 @login_required
 @dept_admin_required
 def add_trainer():
-    db     = get_db()
-    dep_id = request.form.get('department_id') or str(current_user.department_id)
-    email  = request.form.get('email', '').strip().lower()
-    name   = request.form.get('full_name', '').strip()
-    staff  = request.form.get('staff_no', '').strip()
+    db      = get_db()
+    dep_id  = request.form.get('department_id') or str(current_user.department_id)
+    email   = request.form.get('email', '').strip().lower()
+    name    = request.form.get('full_name', '').strip()
+    staff   = request.form.get('staff_no', '').strip()
     temp_pw = generate_temp_password()
 
     if not email or not name:
         flash('Email and name are required.', 'danger')
         return redirect(url_for('dept_admin.trainers'))
     try:
-        auth_id = create_staff_auth_user(email, temp_pw)
         db.table('users').insert({
-            'email': email,
-            'full_name': name,
-            'role': 'trainer',
+            'email':         email,
+            'full_name':     name,
+            'role':          'trainer',
             'department_id': dep_id,
-            'staff_no': staff or None,
-            'auth_user_id': auth_id,
-            'password_hash': '',
-            'created_by': str(current_user.id),
-            'is_active': True,
+            'staff_no':      staff or None,
+            'password_hash': generate_password_hash(temp_pw),
+            'created_by':    str(current_user.id),
+            'is_active':     True,
         }).execute()
         log_action('CREATE_TRAINER', 'user', None, name)
-        flash(f'Trainer "{name}" created. Login email: {email} | Temp password: {temp_pw}', 'success')
+        flash(f'Trainer "{name}" created. Login: {email} | Temp password: {temp_pw}', 'success')
+    except Exception as e:
+        flash(f'Error: {e}', 'danger')
+    return redirect(url_for('dept_admin.trainers'))
+
+
+@dept_admin_bp.route('/trainers/<trainer_id>/assign-units', methods=['POST'])
+@login_required
+@dept_admin_required
+def assign_trainer_units(trainer_id):
+    """Assign which units a trainer is responsible for."""
+    db       = get_db()
+    unit_ids = request.form.getlist('unit_ids')
+    try:
+        db.table('trainer_units').delete().eq('trainer_id', trainer_id).execute()
+        for uid in unit_ids:
+            db.table('trainer_units').insert({
+                'trainer_id': trainer_id,
+                'unit_id':    uid
+            }).execute()
+        trainer = db.table('users').select('full_name').eq('id', trainer_id).single().execute().data
+        name    = trainer['full_name'] if trainer else trainer_id
+        log_action('ASSIGN_TRAINER_UNITS', 'trainer', trainer_id,
+                   f'{name} assigned {len(unit_ids)} unit(s)')
+        flash(f'Units assigned to {name}.', 'success')
     except Exception as e:
         flash(f'Error: {e}', 'danger')
     return redirect(url_for('dept_admin.trainers'))
@@ -334,11 +367,11 @@ def trainees():
 @login_required
 @dept_admin_required
 def add_trainee():
-    db     = get_db()
-    dep_id = request.form.get('department_id') or str(current_user.department_id)
-    email  = request.form.get('email', '').strip().lower()
-    name   = request.form.get('full_name', '').strip()
-    adm_no = request.form.get('admission_no', '').strip()
+    db       = get_db()
+    dep_id   = request.form.get('department_id') or str(current_user.department_id)
+    email    = request.form.get('email', '').strip().lower()
+    name     = request.form.get('full_name', '').strip()
+    adm_no   = request.form.get('admission_no', '').strip()
     class_id = request.form.get('class_id', '').strip()
     temp_pw  = generate_temp_password()
 
@@ -350,28 +383,27 @@ def add_trainee():
         return redirect(url_for('dept_admin.trainees'))
     try:
         result = db.table('users').insert({
-            'email': email,
-            'full_name': name,
-            'role': 'trainee',
+            'email':         email,
+            'full_name':     name,
+            'role':          'trainee',
             'department_id': dep_id,
-            'admission_no': adm_no,
+            'admission_no':  adm_no,
             'password_hash': generate_password_hash(temp_pw),
-            'created_by': str(current_user.id),
-            'is_active': True,
+            'created_by':    str(current_user.id),
+            'is_active':     True,
         }).execute()
 
         if class_id and result.data:
-            trainee_id = result.data[0]['id']
             try:
                 db.table('enrollments').insert({
-                    'trainee_id': trainee_id,
-                    'class_id': class_id
+                    'trainee_id': result.data[0]['id'],
+                    'class_id':   class_id
                 }).execute()
             except Exception:
                 pass
 
         log_action('CREATE_TRAINEE', 'user', None, f'{name} ({adm_no})')
-        flash(f'Trainee "{name}" created. Temp password: {temp_pw}', 'success')
+        flash(f'Trainee "{name}" (ADM: {adm_no}) created. Temp password: {temp_pw}', 'success')
     except Exception as e:
         flash(f'Error: {e}', 'danger')
     return redirect(url_for('dept_admin.trainees'))
@@ -391,40 +423,12 @@ def delete_trainee(trainee_id):
 
 
 # ─────────────────────────────────────────────────────────────
-# API: get units for a class (used by trainee upload form)
+# API: units for a class (trainee upload form)
 # ─────────────────────────────────────────────────────────────
 @dept_admin_bp.route('/api/class-units/<class_id>')
 @login_required
 def api_class_units(class_id):
-    db = get_db()
-    rows = (db.table('class_units')
-            .select('units(id, name)')
-            .eq('class_id', class_id)
-            .execute().data or [])
-    units = [r['units'] for r in rows if r.get('units')]
-    return jsonify({'units': units})
-
-# ─────────────────────────────────────────────────────────────
-# API: GET EVIDENCE FOR ASSESSMENT
-# ─────────────────────────────────────────────────────────────
-@dept_admin_bp.route('/api/assessment/<assessment_id>/evidence')
-@login_required
-@dept_admin_required
-def api_assessment_evidence(assessment_id):
-    """Return evidence files for an assessment as JSON."""
-    db = get_db()
-    try:
-        evidence = (db.table('evidence')
-                    .select('*')
-                    .eq('assessment_id', assessment_id)
-                    .order('uploaded_at')
-                    .execute().data or [])
-        
-        # Build URLs for each evidence file
-        from app.utils import get_storage_public_url, STORAGE_BUCKET_EVIDENCE
-        for ev in evidence:
-            ev['url'] = get_storage_public_url(STORAGE_BUCKET_EVIDENCE, ev.get('file_path', ''))
-        
-        return jsonify({'success': True, 'evidence': evidence})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    db   = get_db()
+    rows = (db.table('class_units').select('units(id, name)')
+            .eq('class_id', class_id).execute().data or [])
+    return jsonify({'units': [r['units'] for r in rows if r.get('units')]})
