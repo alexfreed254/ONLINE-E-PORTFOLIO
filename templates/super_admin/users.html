@@ -130,6 +130,12 @@
                     {{ 'Deactivate' if u.is_active else 'Activate' }}
                   </button>
                 </form>
+                <!-- Reset Password -->
+                <button type="button"
+                  onclick="openResetModal('{{ u.id }}', '{{ u.full_name | replace("'", "\\'") }}')"
+                  class="text-xs px-2 py-1 rounded-lg font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+                  <i class="fas fa-key mr-1"></i>Reset PW
+                </button>
                 {% if u.id != current_user.id %}
                 <form method="POST" action="{{ url_for('super_admin.delete_user', user_id=u.id) }}"
                   onsubmit="return confirm('Delete user {{ u.full_name }}?')">
@@ -149,4 +155,183 @@
     </div>
   </div>
 </div>
+
+<!-- ═══ RESET PASSWORD MODAL ═══ -->
+<div id="resetModal"
+  class="fixed inset-0 z-50 hidden flex items-center justify-center p-4"
+  style="background:rgba(15,23,42,0.55); backdrop-filter:blur(4px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7 relative animate-fade-in">
+
+    <!-- Close -->
+    <button onclick="closeResetModal()"
+      class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-key text-indigo-600 text-lg"></i>
+      </div>
+      <div>
+        <h2 class="text-lg font-extrabold text-slate-800">Reset Password</h2>
+        <p class="text-xs text-slate-400">Set a new password for <span id="resetUserName" class="font-bold text-indigo-600"></span></p>
+      </div>
+    </div>
+
+    <form id="resetForm" method="POST" class="space-y-4" onsubmit="return validateReset()">
+
+      <!-- New Password -->
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">New Password</label>
+        <div class="relative">
+          <input type="password" id="resetPw" name="new_password" required minlength="8"
+            placeholder="Min 8 characters"
+            oninput="checkStrength(this.value)"
+            class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm pr-10">
+          <button type="button" onclick="toggleVisibility('resetPw','eyeIcon1')"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <i id="eyeIcon1" class="fas fa-eye text-sm"></i>
+          </button>
+        </div>
+        <!-- Strength bar -->
+        <div class="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div id="strengthBar" class="h-full rounded-full transition-all duration-300 w-0"></div>
+        </div>
+        <p id="strengthLabel" class="text-xs mt-1 text-slate-400"></p>
+      </div>
+
+      <!-- Confirm Password -->
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Confirm Password</label>
+        <div class="relative">
+          <input type="password" id="resetPwConfirm" name="confirm_password" required
+            placeholder="Re-enter password"
+            class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm pr-10">
+          <button type="button" onclick="toggleVisibility('resetPwConfirm','eyeIcon2')"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <i id="eyeIcon2" class="fas fa-eye text-sm"></i>
+          </button>
+        </div>
+        <p id="matchMsg" class="text-xs mt-1"></p>
+      </div>
+
+      <!-- Info notice -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex gap-2">
+        <i class="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
+        <span>The user will be required to use this new password on their next login. Share it with them securely.</span>
+      </div>
+
+      <button type="submit"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2">
+        <i class="fas fa-lock-open"></i> Reset Password
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+  @keyframes fadeInScale {
+    from { opacity:0; transform:scale(0.95); }
+    to   { opacity:1; transform:scale(1); }
+  }
+  .animate-fade-in { animation: fadeInScale 0.2s ease-out; }
+</style>
+
+<script>
+  function openResetModal(userId, userName) {
+    document.getElementById('resetUserName').textContent = userName;
+    document.getElementById('resetForm').action = '/super-admin/users/reset-password/' + userId;
+    document.getElementById('resetPw').value = '';
+    document.getElementById('resetPwConfirm').value = '';
+    document.getElementById('strengthBar').style.width = '0';
+    document.getElementById('strengthLabel').textContent = '';
+    document.getElementById('matchMsg').textContent = '';
+    document.getElementById('resetModal').classList.remove('hidden');
+    document.getElementById('resetPw').focus();
+  }
+
+  function closeResetModal() {
+    document.getElementById('resetModal').classList.add('hidden');
+  }
+
+  // Close on backdrop click
+  document.getElementById('resetModal').addEventListener('click', function(e) {
+    if (e.target === this) closeResetModal();
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeResetModal();
+  });
+
+  function toggleVisibility(inputId, iconId) {
+    var inp  = document.getElementById(inputId);
+    var icon = document.getElementById(iconId);
+    if (inp.type === 'password') {
+      inp.type  = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      inp.type  = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  }
+
+  function checkStrength(pw) {
+    var bar   = document.getElementById('strengthBar');
+    var label = document.getElementById('strengthLabel');
+    var score = 0;
+    if (pw.length >= 8)  score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    var configs = [
+      { w:'0%',   color:'',                  text:'' },
+      { w:'25%',  color:'bg-red-500',        text:'Weak' },
+      { w:'50%',  color:'bg-amber-500',      text:'Fair' },
+      { w:'75%',  color:'bg-blue-500',       text:'Good' },
+      { w:'100%', color:'bg-emerald-500',    text:'Strong' },
+    ];
+    var cfg = configs[score];
+    bar.className   = 'h-full rounded-full transition-all duration-300 ' + cfg.color;
+    bar.style.width = cfg.w;
+    label.textContent = cfg.text;
+    label.className   = 'text-xs mt-1 ' +
+      (score <= 1 ? 'text-red-500' : score === 2 ? 'text-amber-500' : score === 3 ? 'text-blue-500' : 'text-emerald-600');
+  }
+
+  function validateReset() {
+    var pw  = document.getElementById('resetPw').value;
+    var cpw = document.getElementById('resetPwConfirm').value;
+    var msg = document.getElementById('matchMsg');
+    if (pw !== cpw) {
+      msg.textContent = '✖ Passwords do not match.';
+      msg.className   = 'text-xs mt-1 text-red-500';
+      return false;
+    }
+    if (pw.length < 8) {
+      msg.textContent = '✖ Password must be at least 8 characters.';
+      msg.className   = 'text-xs mt-1 text-red-500';
+      return false;
+    }
+    msg.textContent = '✔ Passwords match.';
+    msg.className   = 'text-xs mt-1 text-emerald-600';
+    return true;
+  }
+
+  // Live confirm match feedback
+  document.getElementById('resetPwConfirm').addEventListener('input', function() {
+    var pw  = document.getElementById('resetPw').value;
+    var msg = document.getElementById('matchMsg');
+    if (!this.value) { msg.textContent = ''; return; }
+    if (this.value === pw) {
+      msg.textContent = '✔ Passwords match.';
+      msg.className   = 'text-xs mt-1 text-emerald-600';
+    } else {
+      msg.textContent = '✖ Passwords do not match.';
+      msg.className   = 'text-xs mt-1 text-red-500';
+    }
+  });
+</script>
 {% endblock %}
