@@ -85,7 +85,7 @@
       <!-- Actions -->
       <div class="flex flex-col gap-2 flex-shrink-0">
         {% if a.script_file_path %}
-        <a href="{{ a.script_file_path }}" target="_blank"
+        <a href="{{ storage_url(BUCKET_SCRIPTS, a.script_file_path) }}" target="_blank"
           class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5">
           <i class="fas fa-eye"></i> View PDF
         </a>

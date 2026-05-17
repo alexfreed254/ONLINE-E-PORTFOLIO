@@ -30,13 +30,21 @@ def create_app():
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'warning'
 
-    # Inject `now` and sidebar stats into every template context
+    # Inject `now`, sidebar stats, and storage URL helper into every template context
     @app.context_processor
     def inject_globals():
         from app.sidebar_context import get_sidebar_stats
+        from app.utils import (
+            get_storage_public_url,
+            STORAGE_BUCKET_SCRIPTS,
+            STORAGE_BUCKET_EVIDENCE,
+        )
         return {
             'now': datetime.utcnow(),
             'sidebar_stats': get_sidebar_stats(),
+            'storage_url': get_storage_public_url,
+            'BUCKET_SCRIPTS': STORAGE_BUCKET_SCRIPTS,
+            'BUCKET_EVIDENCE': STORAGE_BUCKET_EVIDENCE,
         }
 
     from app.blueprints.auth        import auth_bp

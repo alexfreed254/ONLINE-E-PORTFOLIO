@@ -46,6 +46,17 @@ def secure_unique_filename(original: str) -> str:
 # SUPABASE STORAGE UPLOAD
 # ─────────────────────────────────────────────────────────────
 
+def get_storage_public_url(bucket: str, path: str) -> str:
+    """
+    Build the public URL for a file already stored in Supabase Storage.
+    Pattern: {SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}
+    """
+    if not path:
+        return ''
+    supabase_url = os.getenv('SUPABASE_URL', '').rstrip('/')
+    return f"{supabase_url}/storage/v1/object/public/{bucket}/{path}"
+
+
 def upload_to_storage(bucket: str, path: str, file_bytes: bytes, content_type: str) -> str:
     """Upload bytes to Supabase Storage and return the public URL."""
     db = get_db()
@@ -54,8 +65,7 @@ def upload_to_storage(bucket: str, path: str, file_bytes: bytes, content_type: s
         file_bytes,
         {'content-type': content_type, 'upsert': 'true'}
     )
-    public_url = db.storage.from_(bucket).get_public_url(path)
-    return public_url
+    return get_storage_public_url(bucket, path)
 
 
 def delete_from_storage(bucket: str, path: str):

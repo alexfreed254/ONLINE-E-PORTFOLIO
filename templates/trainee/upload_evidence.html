@@ -56,7 +56,7 @@
         </p>
       </div>
       {% if assessment.script_file_path %}
-      <a href="{{ assessment.script_file_path }}" target="_blank"
+      <a href="{{ storage_url(BUCKET_SCRIPTS, assessment.script_file_path) }}" target="_blank"
         class="mt-3 w-full flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 rounded-xl transition-colors text-xs">
         <i class="fas fa-eye"></i> View PDF Script
       </a>
@@ -130,14 +130,14 @@
         <div class="rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm hover:shadow-md transition-shadow">
           <!-- Thumbnail -->
           {% if ev.file_type == 'photo' %}
-          <a href="{{ ev.file_path }}" target="_blank" class="block">
-            <img src="{{ ev.file_path }}" alt="{{ ev.file_name }}"
+          <a href="{{ storage_url(BUCKET_EVIDENCE, ev.file_path) }}" target="_blank" class="block">
+            <img src="{{ storage_url(BUCKET_EVIDENCE, ev.file_path) }}" alt="{{ ev.file_name }}"
               class="media-thumb hover:opacity-90 transition-opacity"
               onerror="this.src=''; this.parentElement.innerHTML='<div class=\'w-full aspect-square bg-slate-200 flex items-center justify-center\'><i class=\'fas fa-image text-slate-400 text-3xl\'></i></div>'">
           </a>
           {% else %}
           <div class="w-full aspect-square bg-slate-800 flex items-center justify-center relative">
-            <a href="{{ ev.file_path }}" target="_blank" class="text-white text-center">
+            <a href="{{ storage_url(BUCKET_EVIDENCE, ev.file_path) }}" target="_blank" class="text-white text-center">
               <i class="fas fa-play-circle text-5xl mb-2 block opacity-80 hover:opacity-100 transition-opacity"></i>
               <p class="text-xs font-semibold">Play Video</p>
             </a>
