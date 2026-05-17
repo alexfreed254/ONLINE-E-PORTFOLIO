@@ -65,4 +65,32 @@
   </div>
   {% endif %}
 </div>
+
+<!-- Units List (Quick Reports) -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+      <i class="fas fa-book text-indigo-500"></i> Units (Quick Reports)
+    </h3>
+    <span class="text-xs text-slate-400">Download CSV per unit</span>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    {% for u in units_list %}
+    <div class="p-4 border rounded-xl flex items-center justify-between">
+      <div>
+        <p class="font-semibold text-slate-800 text-sm truncate">{{ u.name }}</p>
+      </div>
+      <div>
+        <a href="{{ url_for('trainer.download_unit_report', unit_id=u.id) }}" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold">
+          <i class="fas fa-download mr-1"></i> Download
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-span-3 py-8 text-center text-slate-400">No units found.</div>
+    {% endfor %}
+  </div>
+</div>
 {% endblock %}
+

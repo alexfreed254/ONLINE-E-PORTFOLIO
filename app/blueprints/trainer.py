@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from functools import wraps
 from app.db import get_db
-from app.utils import log_action, format_bytes
+from app.utils import log_action, format_bytes, generate_unit_report_csv
 
 trainer_bp = Blueprint('trainer', __name__)
 
@@ -35,9 +35,10 @@ def dashboard():
                          db.table('classes').select('id').eq('department_id', dep_id).execute().data or []]
             if class_ids:
                 q = q.in_('class_id', class_ids)
+
         all_a = q.execute().data or []
-        stats['total']    = len(all_a)
-        stats['pending']  = sum(1 for a in all_a if a['status'] == 'pending')
+        stats['total'] = len(all_a)
+        stats['pending'] = sum(1 for a in all_a if a['status'] == 'pending')
         stats['approved'] = sum(1 for a in all_a if a['status'] == 'approved')
         stats['rejected'] = sum(1 for a in all_a if a['status'] == 'rejected')
 
@@ -48,11 +49,21 @@ def dashboard():
               .order('uploaded_at', desc=True)
               .limit(15))
         recent_pending = q2.execute().data or []
+
+        # Units list for dashboard quick CSV reports
+        units_list = (db.table('units')
+                       .select('id, name')
+                       .order('name')
+                       .limit(50)
+                       .execute().data or [])
     except Exception as e:
         flash(f'Error: {e}', 'danger')
         recent_pending = []
+        units_list = []
 
-    return render_template('trainer/dashboard.html', stats=stats, recent_pending=recent_pending)
+    return render_template('trainer/dashboard.html', stats=stats, recent_pending=recent_pending, units_list=units_list)
+
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -131,6 +142,27 @@ def browse_unit(class_id, unit_id):
     return render_template('trainer/browse_unit.html',
                            cls=cls, unit=unit, assessments=assessments,
                            status_filter=status_filter)
+
+
+@trainer_bp.route('/download-unit-report/<unit_id>')
+@login_required
+@trainer_required
+def download_unit_report(unit_id):
+    """Allow trainers to download unit reports (department-limited)."""
+    from flask import make_response
+    db = get_db()
+    try:
+        dept_id = str(current_user.department_id) if current_user.department_id else None
+        csv_data = generate_unit_report_csv(unit_id, department_id=dept_id)
+        unit = db.table('units').select('name').eq('id', unit_id).single().execute().data
+        unit_name = unit['name'] if unit else 'Unit'
+        response = make_response(csv_data)
+        response.headers['Content-Disposition'] = f'attachment; filename="unit_report_{unit_name.replace(" ", "_")}.csv"'
+        response.headers['Content-type'] = 'text/csv'
+        return response
+    except Exception as e:
+        flash(f'Error generating report: {str(e)}', 'danger')
+        return redirect(url_for('trainer.browse'))
 
 
 # ─────────────────────────────────────────────────────────────

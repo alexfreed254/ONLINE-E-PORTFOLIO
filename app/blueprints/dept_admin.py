@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash
 from functools import wraps
 from app.db import get_db
 from app.auth_service import create_staff_auth_user
-from app.utils import log_action, CLASSES_AND_UNITS
+from app.utils import log_action, CLASSES_AND_UNITS, generate_unit_report_csv
 import secrets
 import string
 
@@ -43,6 +43,10 @@ def dashboard():
         stats['classes']  = len(q_base.execute().data or [])
 
         q_units = db.table('units').select('id, courses(department_id)')
+        # Units for this department (to allow CSV downloads per unit)
+        q_units = db.table('units').select('id, name')
+        if dep_id:
+            q_units = q_units.eq('department_id', dep_id)
         units_data = q_units.execute().data or []
         if dep_id:
             stats['units'] = sum(1 for u in units_data
@@ -64,6 +68,7 @@ def dashboard():
                   .order('uploaded_at', desc=True)
                   .limit(10)
                   .execute().data or [])
+        units_list = q_units.order('name').execute().data or []
         
         # Add evidence count to each assessment
         for a in recent:
@@ -72,8 +77,29 @@ def dashboard():
     except Exception as e:
         flash(f'Error: {e}', 'danger')
         recent = []
+        units_list = []
 
-    return render_template('dept_admin/dashboard.html', stats=stats, recent=recent)
+    return render_template('dept_admin/dashboard.html', stats=stats, recent=recent, units_list=units_list)
+
+
+@dept_admin_bp.route('/download-unit-report/<unit_id>')
+@login_required
+@dept_admin_required
+def download_unit_report(unit_id):
+    """Department admin download CSV report for a unit."""
+    from flask import make_response
+    db = get_db()
+    try:
+        csv_data = generate_unit_report_csv(unit_id, department_id=str(current_user.department_id) if current_user.department_id else None)
+        unit = db.table('units').select('name').eq('id', unit_id).single().execute().data
+        unit_name = unit['name'] if unit else 'Unit'
+        response = make_response(csv_data)
+        response.headers['Content-Disposition'] = f'attachment; filename="unit_report_{unit_name.replace(" ", "_")}.csv"'
+        response.headers['Content-type'] = 'text/csv'
+        return response
+    except Exception as e:
+        flash(f'Error generating report: {str(e)}', 'danger')
+        return redirect(url_for('dept_admin.dashboard'))
 
 
 # ─────────────────────────────────────────────────────────────

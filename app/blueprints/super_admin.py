@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash
 from functools import wraps
 from app.db import get_db
 from app.auth_service import STAFF_ROLES, create_staff_auth_user, update_staff_auth_password
-from app.utils import log_action, format_bytes
+from app.utils import log_action, format_bytes, generate_unit_report_csv
 from datetime import datetime
 
 super_admin_bp = Blueprint('super_admin', __name__)
@@ -59,6 +59,9 @@ def dashboard():
         for a in recent_assessments:
             ev = db.table('evidence').select('id').eq('assessment_id', a['id']).execute().data or []
             a['evidence_count'] = len(ev)
+        
+        # Units list (limited) for quick CSV downloads
+        units_list = db.table('units').select('id, name').order('name').limit(50).execute().data or []
 
         # Recent logs
         recent_logs = (db.table('system_logs')
@@ -70,7 +73,7 @@ def dashboard():
         flash(f'Error loading dashboard: {e}', 'danger')
         recent_logs = []
 
-    return render_template('super_admin/dashboard.html', stats=stats, recent_assessments=recent_assessments, recent_logs=recent_logs)
+    return render_template('super_admin/dashboard.html', stats=stats, recent_assessments=recent_assessments, recent_logs=recent_logs, units_list=units_list)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -311,3 +314,29 @@ def api_assessment_evidence(assessment_id):
         return jsonify({'success': True, 'evidence': evidence})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# DOWNLOAD UNIT REPORT
+# ─────────────────────────────────────────────────────────────
+@super_admin_bp.route('/download-unit-report/<unit_id>')
+@login_required
+@super_admin_required
+def download_unit_report(unit_id):
+    """Download CSV report of assessments for a unit."""
+    from flask import make_response
+    
+    db = get_db()
+    try:
+        unit = db.table('units').select('name').eq('id', unit_id).single().execute().data
+        unit_name = unit['name'] if unit else 'Unit'
+        
+        csv_data = generate_unit_report_csv(unit_id)
+        
+        response = make_response(csv_data)
+        response.headers['Content-Disposition'] = f'attachment; filename="unit_report_{unit_name.replace(" ", "_")}.csv"'
+        response.headers['Content-type'] = 'text/csv'
+        return response
+    except Exception as e:
+        flash(f'Error generating report: {str(e)}', 'danger')
+        return redirect(url_for('super_admin.dashboard'))

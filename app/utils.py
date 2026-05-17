@@ -3,6 +3,8 @@ Shared utility helpers used across blueprints.
 """
 import os
 import uuid
+import csv
+import io
 from datetime import datetime
 from flask import request
 from flask_login import current_user
@@ -183,4 +185,91 @@ CLASSES_AND_UNITS = {
     'EIN_L5 1F SEPT 2024':  ['Maintain Elec Inst', 'Electrical Principles', 'Workshop Technology', 'Testing of Elec Instl', 'MATHEMATICS', 'EP Skills'],
     'TEL_L6 1A SEPT 2024':  ['Instal Base Transmission', 'Instal Satelite Signal Trans', 'Electrical Pinciples', 'Mathematics', 'Workshop Technology', 'Communication Equipments', 'Telephone Networks', 'Fibre Optic cables', 'Inside Plant Networks'],
     'TEL L6 1A SEPT 2025':  ['Instal Base Transmission', 'Instal Satelite Signal Trans', 'Electrical Pinciples', 'Mathematics', 'Workshop Technology', 'Communication Equipments', 'Telephone Networks', 'Fibre Optic cables', 'Inside Plant Networks'],
+}
+
+# ─────────────────────────────────────────────────────────────
+# UNIT ASSESSMENT REPORT GENERATION
+# ─────────────────────────────────────────────────────────────
+
+def generate_unit_report_csv(unit_id: str, class_id: str = None, department_id: str = None) -> str:
+    """
+    Generate a CSV report for a unit showing trainees and their assessment uploads.
+    Columns: Admission No, Full Name, Practical, Oral, Theory
+    Each assessment type shows YES if >= 3 evidence files, blank otherwise.
+    """
+    db = get_db()
+    
+    try:
+        # Get unit name
+        unit = db.table('units').select('name').eq('id', unit_id).single().execute().data
+        unit_name = unit['name'] if unit else 'Unit'
+        
+        # Build query for assessments
+        q = (db.table('assessments')
+             .select('*, users!assessments_trainee_id_fkey(admission_no, full_name)')
+             .eq('unit_id', unit_id))
+        
+        if class_id:
+            q = q.eq('class_id', class_id)
+        
+        assessments = q.execute().data or []
+        
+        # Filter by department if provided
+        if department_id:
+            user_ids = [a['trainee_id'] for a in assessments]
+            if user_ids:
+                dept_users = db.table('users').select('id').eq('department_id', department_id).execute().data or []
+                dept_user_ids = {u['id'] for u in dept_users}
+                assessments = [a for a in assessments if a['trainee_id'] in dept_user_ids]
+        
+        # Count evidence per trainee per assessment type
+        trainee_data = {}
+        for a in assessments:
+            trainee_id = a['trainee_id']
+            admission_no = a['users']['admission_no'] if a.get('users') else ''
+            full_name = a['users']['full_name'] if a.get('users') else ''
+            assessment_type = a.get('assessment_type', '').lower()
+            
+            if trainee_id not in trainee_data:
+                trainee_data[trainee_id] = {
+                    'admission_no': admission_no,
+                    'full_name': full_name,
+                    'practical': '',
+                    'oral': '',
+                    'theory': '',
+                }
+            
+            # Count evidence for this assessment
+            evidence_count = len(db.table('evidence').select('id').eq('assessment_id', a['id']).execute().data or [])
+            
+            # Map to assessment type
+            if assessment_type in ['practical', 'practicals', 'prac']:
+                if evidence_count >= 3:
+                    trainee_data[trainee_id]['practical'] = 'YES'
+            elif assessment_type in ['oral', 'orals']:
+                if evidence_count >= 3:
+                    trainee_data[trainee_id]['oral'] = 'YES'
+            elif assessment_type in ['theory', 'theories', 'theo']:
+                if evidence_count >= 3:
+                    trainee_data[trainee_id]['theory'] = 'YES'
+        
+        # Generate CSV
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=['Admission No', 'Full Name', 'Practical', 'Oral', 'Theory'])
+        writer.writeheader()
+        
+        # Sort by admission number
+        for trainee_id in sorted(trainee_data.keys(), key=lambda t: trainee_data[t]['admission_no']):
+            data = trainee_data[trainee_id]
+            writer.writerow({
+                'Admission No': data['admission_no'],
+                'Full Name': data['full_name'],
+                'Practical': data['practical'],
+                'Oral': data['oral'],
+                'Theory': data['theory'],
+            })
+        
+        return output.getvalue()
+    except Exception as e:
+        return f"Error generating report: {str(e)}"
 }

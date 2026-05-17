@@ -37,7 +37,7 @@
         <!-- ── STAFF FORM ── -->
         <div id="form-staff" {% if active_tab == 'trainee' %}class="hidden"{% endif %}>
           <p class="text-xs text-slate-500 mb-5">
-            For <strong>Super Admins, Department Admins</strong> and <strong>Trainers</strong>
+          <strong></strong><strong></strong>
           </p>
           <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-5">
             <input type="hidden" name="login_type" value="staff">
@@ -112,8 +112,7 @@
         <!-- Info note -->
         <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
           <p class="text-xs text-amber-800 font-semibold">
-            <i class="fas fa-info-circle mr-1"></i>
-            Contact your Department Administrator if you need login credentials or have forgotten your password.
+      
           </p>
         </div>
       </div>
