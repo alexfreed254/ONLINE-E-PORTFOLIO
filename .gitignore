@@ -1,9 +1,51 @@
-.env
-.venv/
-venv/
+# ── Python ──────────────────────────────────────────────────
 __pycache__/
-*.pyc
-.pytest_cache/
-instance/
-.DS_Store
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual environments ─────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ── Environment / secrets ────────────────────────────────────
+.env
+*.env
+!.env.example
+
+# ── IDE / editor ─────────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Flask / runtime ──────────────────────────────────────────
+instance/
+*.sqlite3
+*.db
+flask_session/
+
+# ── Uploads / media (stored in Supabase Storage, not git) ────
+uploads/
+static/uploads/
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Test / coverage ──────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/

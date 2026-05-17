@@ -1,13 +1,17 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, make_response
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from functools import wraps
 from app.db import get_db
-from app.auth_service import STAFF_ROLES, create_staff_auth_user, update_staff_auth_password
-from app.utils import log_action, format_bytes, generate_unit_report_csv
+from app.utils import (log_action, format_bytes, generate_unit_report_csv,
+                       get_storage_public_url,
+                       STORAGE_BUCKET_SCRIPTS, STORAGE_BUCKET_EVIDENCE)
 from datetime import datetime
 
 super_admin_bp = Blueprint('super_admin', __name__)
+
+# Roles that log in with email+password (not admission number)
+STAFF_ROLES = ('super_admin', 'dept_admin', 'trainer')
 
 
 def super_admin_required(f):
@@ -27,53 +31,62 @@ def super_admin_required(f):
 @login_required
 @super_admin_required
 def dashboard():
-    db = get_db()
-    stats = {}
+    db                 = get_db()
+    stats              = {}
     recent_assessments = []
+    recent_logs        = []
+    units_list         = []
+
     try:
         stats['departments'] = len(db.table('departments').select('id').execute().data or [])
         stats['users']       = len(db.table('users').select('id').execute().data or [])
         stats['assessments'] = len(db.table('assessments').select('id').execute().data or [])
         stats['classes']     = len(db.table('classes').select('id').execute().data or [])
 
-        # Counts by role
         all_users = db.table('users').select('role').execute().data or []
         stats['dept_admins'] = sum(1 for u in all_users if u['role'] == 'dept_admin')
         stats['trainers']    = sum(1 for u in all_users if u['role'] == 'trainer')
         stats['trainees']    = sum(1 for u in all_users if u['role'] == 'trainee')
 
-        # Assessment status counts
         all_assess = db.table('assessments').select('status').execute().data or []
         stats['pending']  = sum(1 for a in all_assess if a['status'] == 'pending')
         stats['approved'] = sum(1 for a in all_assess if a['status'] == 'approved')
         stats['rejected'] = sum(1 for a in all_assess if a['status'] == 'rejected')
 
-        # Recent assessments with trainee info
-        recent_assessments = (db.table('assessments')
-                             .select('*, users!assessments_trainee_id_fkey(full_name, admission_no), units(name), classes(name)')
-                             .order('uploaded_at', desc=True)
-                             .limit(10)
-                             .execute().data or [])
-        
-        # Add evidence count to each assessment
+        recent_assessments = (
+            db.table('assessments')
+            .select('*, users!assessments_trainee_id_fkey(full_name, admission_no), units(name), classes(name)')
+            .order('uploaded_at', desc=True)
+            .limit(10)
+            .execute().data or []
+        )
         for a in recent_assessments:
             ev = db.table('evidence').select('id').eq('assessment_id', a['id']).execute().data or []
             a['evidence_count'] = len(ev)
-        
-        # Units list (limited) for quick CSV downloads
-        units_list = db.table('units').select('id, name').order('name').limit(50).execute().data or []
+            # Build public URL for the PDF script
+            a['script_url'] = get_storage_public_url(STORAGE_BUCKET_SCRIPTS, a.get('script_file_path', ''))
 
-        # Recent logs
-        recent_logs = (db.table('system_logs')
-                       .select('*, users(full_name, role)')
-                       .order('created_at', desc=True)
-                       .limit(20)
-                       .execute().data or [])
+        units_list = (
+            db.table('units').select('id, name').order('name').limit(50).execute().data or []
+        )
+
+        recent_logs = (
+            db.table('system_logs')
+            .select('*, users(full_name, role)')
+            .order('created_at', desc=True)
+            .limit(20)
+            .execute().data or []
+        )
     except Exception as e:
         flash(f'Error loading dashboard: {e}', 'danger')
-        recent_logs = []
 
-    return render_template('super_admin/dashboard.html', stats=stats, recent_assessments=recent_assessments, recent_logs=recent_logs, units_list=units_list)
+    return render_template(
+        'super_admin/dashboard.html',
+        stats=stats,
+        recent_assessments=recent_assessments,
+        recent_logs=recent_logs,
+        units_list=units_list,
+    )
 
 
 # ─────────────────────────────────────────────────────────────
@@ -126,14 +139,15 @@ def delete_department(dep_id):
 @login_required
 @super_admin_required
 def users():
-    db   = get_db()
-    role = request.args.get('role', '')
-    q    = db.table('users').select('*, departments(name)')
+    db        = get_db()
+    role      = request.args.get('role', '')
+    q         = db.table('users').select('*, departments(name)')
     if role:
         q = q.eq('role', role)
     all_users = q.order('full_name').execute().data or []
     deps      = db.table('departments').select('*').order('name').execute().data or []
-    return render_template('super_admin/users.html', users=all_users, departments=deps, role_filter=role)
+    return render_template('super_admin/users.html',
+                           users=all_users, departments=deps, role_filter=role)
 
 
 @super_admin_bp.route('/users/add', methods=['POST'])
@@ -141,44 +155,38 @@ def users():
 @super_admin_required
 def add_user():
     db   = get_db()
-    data = {
-        'email':         request.form.get('email', '').strip().lower(),
-        'full_name':     request.form.get('full_name', '').strip(),
-        'role':          request.form.get('role', ''),
-        'department_id': request.form.get('department_id') or None,
-        'admission_no':  request.form.get('admission_no', '').strip() or None,
-        'staff_no':      request.form.get('staff_no', '').strip() or None,
-        'password_hash': '',  # set after validation
-        'created_by':    str(current_user.id),
-        'is_active':     True,
-    }
-    if not data['email'] or not data['full_name'] or not data['role']:
+    role = request.form.get('role', '')
+    email     = request.form.get('email', '').strip().lower()
+    full_name = request.form.get('full_name', '').strip()
+    adm_no    = request.form.get('admission_no', '').strip() or None
+    staff_no  = request.form.get('staff_no', '').strip() or None
+    dep_id    = request.form.get('department_id') or None
+    pw        = request.form.get('password', '').strip()
+
+    if not email or not full_name or not role:
         flash('Email, name and role are required.', 'danger')
         return redirect(url_for('super_admin.users'))
-    pw = request.form.get('password', '').strip()
     if len(pw) < 8:
         flash('Password must be at least 8 characters.', 'danger')
         return redirect(url_for('super_admin.users'))
-    if data['role'] == 'trainee':
-        adm = data.get('admission_no') or ''
-        if not adm.isdigit() or len(adm) != 5:
-            flash('Trainees require a 5-digit admission number.', 'danger')
-            return redirect(url_for('super_admin.users'))
-        data['password_hash'] = generate_password_hash(pw)
-    elif data['role'] in STAFF_ROLES:
-        try:
-            data['auth_user_id'] = create_staff_auth_user(data['email'], pw)
-            data['password_hash'] = ''
-        except Exception as e:
-            flash(f'Supabase Auth error: {e}', 'danger')
-            return redirect(url_for('super_admin.users'))
-    else:
-        flash('Invalid role.', 'danger')
+    if role == 'trainee' and (not adm_no or not adm_no.isdigit() or len(adm_no) != 5):
+        flash('Trainees require a 5-digit admission number.', 'danger')
         return redirect(url_for('super_admin.users'))
+
     try:
-        db.table('users').insert(data).execute()
-        log_action('CREATE_USER', 'user', None, f"{data['full_name']} ({data['role']})")
-        flash(f"User {data['full_name']} created.", 'success')
+        db.table('users').insert({
+            'email':         email,
+            'full_name':     full_name,
+            'role':          role,
+            'department_id': dep_id,
+            'admission_no':  adm_no,
+            'staff_no':      staff_no,
+            'password_hash': generate_password_hash(pw),
+            'created_by':    str(current_user.id),
+            'is_active':     True,
+        }).execute()
+        log_action('CREATE_USER', 'user', None, f'{full_name} ({role})')
+        flash(f'User {full_name} created.', 'success')
     except Exception as e:
         flash(f'Error: {e}', 'danger')
     return redirect(url_for('super_admin.users'))
@@ -193,8 +201,7 @@ def toggle_user(user_id):
     if user:
         new_state = not user['is_active']
         db.table('users').update({'is_active': new_state}).eq('id', user_id).execute()
-        action = 'ACTIVATE_USER' if new_state else 'DEACTIVATE_USER'
-        log_action(action, 'user', user_id, user['full_name'])
+        log_action('ACTIVATE_USER' if new_state else 'DEACTIVATE_USER', 'user', user_id, user['full_name'])
         flash(f"User {'activated' if new_state else 'deactivated'}.", 'success')
     return redirect(url_for('super_admin.users'))
 
@@ -203,18 +210,14 @@ def toggle_user(user_id):
 @login_required
 @super_admin_required
 def reset_password(user_id):
-    db = get_db()
-    new_pw = request.form.get('new_password', 'Password@123')
-    user = db.table('users').select('role, auth_user_id').eq('id', user_id).single().execute().data
-    if not user:
-        flash('User not found.', 'danger')
+    new_pw = request.form.get('new_password', '').strip()
+    if len(new_pw) < 8:
+        flash('Password must be at least 8 characters.', 'danger')
         return redirect(url_for('super_admin.users'))
     try:
-        if user.get('auth_user_id') and user.get('role') in STAFF_ROLES:
-            update_staff_auth_password(user['auth_user_id'], new_pw)
-            db.table('users').update({'password_hash': ''}).eq('id', user_id).execute()
-        else:
-            db.table('users').update({'password_hash': generate_password_hash(new_pw)}).eq('id', user_id).execute()
+        get_db().table('users').update(
+            {'password_hash': generate_password_hash(new_pw)}
+        ).eq('id', user_id).execute()
         log_action('RESET_PASSWORD', 'user', user_id)
         flash('Password reset successfully.', 'success')
     except Exception as e:
@@ -242,17 +245,18 @@ def delete_user(user_id):
 @login_required
 @super_admin_required
 def logs():
-    db      = get_db()
-    page    = int(request.args.get('page', 1))
+    db       = get_db()
+    page     = int(request.args.get('page', 1))
     per_page = 50
-    offset  = (page - 1) * per_page
+    offset   = (page - 1) * per_page
 
-    logs_data = (db.table('system_logs')
-                 .select('*, users(full_name, role)')
-                 .order('created_at', desc=True)
-                 .range(offset, offset + per_page - 1)
-                 .execute().data or [])
-
+    logs_data = (
+        db.table('system_logs')
+        .select('*, users(full_name, role)')
+        .order('created_at', desc=True)
+        .range(offset, offset + per_page - 1)
+        .execute().data or []
+    )
     total = len(db.table('system_logs').select('id').execute().data or [])
     pages = (total + per_page - 1) // per_page
 
@@ -288,55 +292,52 @@ def assessments():
     if status:
         q = q.eq('status', status)
     data = q.order('uploaded_at', desc=True).execute().data or []
+
+    # Attach public script URL to each assessment
+    for a in data:
+        a['script_url'] = get_storage_public_url(STORAGE_BUCKET_SCRIPTS, a.get('script_file_path', ''))
+
     return render_template('super_admin/assessments.html', assessments=data, status_filter=status)
 
+
 # ─────────────────────────────────────────────────────────────
-# API: GET EVIDENCE FOR ASSESSMENT
+# API: evidence for an assessment (used by dashboard modal)
 # ─────────────────────────────────────────────────────────────
 @super_admin_bp.route('/api/assessment/<assessment_id>/evidence')
 @login_required
 @super_admin_required
 def api_assessment_evidence(assessment_id):
-    """Return evidence files for an assessment as JSON."""
     db = get_db()
     try:
-        evidence = (db.table('evidence')
-                    .select('*')
-                    .eq('assessment_id', assessment_id)
-                    .order('uploaded_at')
-                    .execute().data or [])
-        
-        # Build URLs for each evidence file
-        from app.utils import get_storage_public_url, STORAGE_BUCKET_EVIDENCE
+        evidence = (
+            db.table('evidence').select('*')
+            .eq('assessment_id', assessment_id)
+            .order('uploaded_at')
+            .execute().data or []
+        )
         for ev in evidence:
             ev['url'] = get_storage_public_url(STORAGE_BUCKET_EVIDENCE, ev.get('file_path', ''))
-        
         return jsonify({'success': True, 'evidence': evidence})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ─────────────────────────────────────────────────────────────
-# DOWNLOAD UNIT REPORT
+# DOWNLOAD UNIT REPORT (CSV)
 # ─────────────────────────────────────────────────────────────
 @super_admin_bp.route('/download-unit-report/<unit_id>')
 @login_required
 @super_admin_required
 def download_unit_report(unit_id):
-    """Download CSV report of assessments for a unit."""
-    from flask import make_response
-    
     db = get_db()
     try:
-        unit = db.table('units').select('name').eq('id', unit_id).single().execute().data
-        unit_name = unit['name'] if unit else 'Unit'
-        
+        unit     = db.table('units').select('name').eq('id', unit_id).single().execute().data
+        name     = unit['name'].replace(' ', '_') if unit else 'Unit'
         csv_data = generate_unit_report_csv(unit_id)
-        
-        response = make_response(csv_data)
-        response.headers['Content-Disposition'] = f'attachment; filename="unit_report_{unit_name.replace(" ", "_")}.csv"'
-        response.headers['Content-type'] = 'text/csv'
-        return response
+        resp     = make_response(csv_data)
+        resp.headers['Content-Disposition'] = f'attachment; filename="report_{name}.csv"'
+        resp.headers['Content-type'] = 'text/csv'
+        return resp
     except Exception as e:
-        flash(f'Error generating report: {str(e)}', 'danger')
+        flash(f'Error generating report: {e}', 'danger')
         return redirect(url_for('super_admin.dashboard'))

@@ -2,6 +2,50 @@
 {% block title %}Super Admin Dashboard{% endblock %}
 {% block page_title %}Super Admin Dashboard{% endblock %}
 {% block page_subtitle %}System-wide overview and management{% endblock %}
+{% block sidebar_color %}bg-slate-900{% endblock %}
+
+{% block sidebar_stats %}
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val">{{ stats.users }}</div>
+    <div class="sidebar-stat-lbl">Total Users</div>
+  </div>
+  <i class="fas fa-users opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-amber-300">{{ stats.pending }}</div>
+    <div class="sidebar-stat-lbl">Pending</div>
+  </div>
+  <i class="fas fa-clock opacity-40 text-xl"></i>
+</div>
+<div class="sidebar-stat">
+  <div>
+    <div class="sidebar-stat-val text-emerald-300">{{ stats.approved }}</div>
+    <div class="sidebar-stat-lbl">Approved</div>
+  </div>
+  <i class="fas fa-check-circle opacity-40 text-xl"></i>
+</div>
+{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{{ url_for('super_admin.dashboard') }}" class="sidebar-link text-slate-200 active">
+  <i class="fas fa-th-large w-5 text-center"></i> Dashboard
+</a>
+<a href="{{ url_for('super_admin.departments') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-building w-5 text-center"></i> Departments
+</a>
+<a href="{{ url_for('super_admin.users') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-users w-5 text-center"></i> All Users
+</a>
+<a href="{{ url_for('super_admin.assessments') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-file-alt w-5 text-center"></i> Assessments
+</a>
+<a href="{{ url_for('super_admin.logs') }}" class="sidebar-link text-slate-300">
+  <i class="fas fa-list-alt w-5 text-center"></i> System Logs
+</a>
+{% endblock %}
+
 {% block content %}
 <!-- Stats Grid -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
@@ -53,7 +97,7 @@
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Type</th>
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Status</th>
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Date</th>
-          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Actions</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Files</th>
         </tr>
       </thead>
       <tbody>
@@ -65,23 +109,28 @@
           </td>
           <td class="py-2 px-3 text-xs text-slate-500">{{ a.classes.name if a.classes else '—' }}</td>
           <td class="py-2 px-3 text-xs text-slate-500">{{ a.units.name if a.units else '—' }}</td>
-          <td class="py-2 px-3 text-xs font-bold text-slate-600">{{ a.assessment_type }}</td>
+          <td class="py-2 px-3">
+            <span class="bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-md">{{ a.assessment_type }}</span>
+          </td>
           <td class="py-2 px-3">
             <span class="pill {% if a.status=='approved' %}badge-approved{% elif a.status=='rejected' %}badge-rejected{% else %}badge-pending{% endif %}">
               {{ a.status.capitalize() }}
             </span>
           </td>
-          <td class="py-2 px-3 text-xs text-slate-400">{{ a.uploaded_at[:10] if a.uploaded_at else '—' }}</td>
+          <td class="py-2 px-3 text-xs text-slate-400 whitespace-nowrap">
+            {{ a.uploaded_at[:10] if a.uploaded_at else '—' }}
+          </td>
           <td class="py-2 px-3">
             <div class="flex items-center gap-1.5">
-              {% if a.script_file_path %}
-              <a href="{{ storage_url(BUCKET_SCRIPTS, a.script_file_path) }}" target="_blank" title="View PDF Script"
+              {% if a.script_url %}
+              <a href="{{ a.script_url }}" target="_blank"
                 class="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-md transition-colors flex items-center gap-1">
                 <i class="fas fa-file-pdf"></i> PDF
               </a>
               {% endif %}
               {% if a.evidence_count > 0 %}
-              <button onclick="viewEvidence('{{ a.id }}')" title="Evidence files" class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 text-xs font-bold rounded-md transition-colors cursor-pointer">
+              <button onclick="viewEvidence('{{ a.id }}')"
+                class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 text-xs font-bold rounded-md transition-colors cursor-pointer">
                 <i class="fas fa-images"></i> {{ a.evidence_count }}
               </button>
               {% endif %}
@@ -95,6 +144,28 @@
     </table>
   </div>
 </div>
+
+<!-- Units Quick Reports -->
+{% if units_list %}
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+      <i class="fas fa-book text-indigo-500"></i> Units — Quick CSV Reports
+    </h3>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    {% for u in units_list %}
+    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl">
+      <p class="font-semibold text-slate-700 text-sm truncate flex-1 mr-2">{{ u.name }}</p>
+      <a href="{{ url_for('super_admin.download_unit_report', unit_id=u.id) }}"
+        class="flex-shrink-0 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors">
+        <i class="fas fa-download mr-1"></i> CSV
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <!-- Recent Logs -->
 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -118,13 +189,13 @@
       <tbody>
         {% for log in recent_logs %}
         <tr class="border-b border-slate-50 hover:bg-slate-50">
-          <td class="py-2 px-3 text-xs text-slate-400 whitespace-nowrap">
+          <td class="py-2 px-3 text-xs text-slate-400 whitespace-nowrap font-mono">
             {{ log.created_at[:16].replace('T',' ') if log.created_at else '—' }}
           </td>
-          <td class="py-2 px-3 font-semibold text-slate-700 text-xs">
-            {{ log.users.full_name if log.users else 'System' }}
+          <td class="py-2 px-3 text-xs">
+            <p class="font-semibold text-slate-700">{{ log.users.full_name if log.users else 'System' }}</p>
             {% if log.users %}
-            <span class="text-slate-400">({{ log.users.role.replace('_',' ') }})</span>
+            <p class="text-slate-400 capitalize">{{ log.users.role.replace('_',' ') }}</p>
             {% endif %}
           </td>
           <td class="py-2 px-3">
@@ -142,18 +213,21 @@
 </div>
 
 <!-- Evidence Modal -->
-<div id="evidenceModal" style="display:none;" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-    <div class="sticky top-0 bg-white border-b border-slate-100 p-6 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-slate-800">Assessment Evidence</h2>
-      <button onclick="closeEvidence()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+<div id="evidenceModal" style="display:none;"
+  class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+  onclick="if(event.target===this)closeEvidence()">
+  <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+    <div class="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+      <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+        <i class="fas fa-images text-purple-500"></i> Assessment Evidence
+      </h2>
+      <button onclick="closeEvidence()"
+        class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
     </div>
     <div id="evidenceContent" class="p-6">
-      <div class="text-center text-slate-400">
-        <div class="inline-block animate-spin">
-          <i class="fas fa-spinner text-2xl"></i>
-        </div>
-        <p class="mt-2">Loading evidence files...</p>
+      <div class="text-center text-slate-400 py-8">
+        <i class="fas fa-spinner fa-spin text-2xl block mb-2"></i>
+        <p class="text-sm">Loading evidence files...</p>
       </div>
     </div>
   </div>
@@ -161,84 +235,47 @@
 
 <script>
 function viewEvidence(assessmentId) {
-  const modal = document.getElementById('evidenceModal');
-  const content = document.getElementById('evidenceContent');
+  var modal   = document.getElementById('evidenceModal');
+  var content = document.getElementById('evidenceContent');
   modal.style.display = 'flex';
-  
-  fetch(`{{ url_for('super_admin.api_assessment_evidence', assessment_id='') }}${assessmentId}`)
-    .then(r => r.json())
-    .then(data => {
+  content.innerHTML = '<div class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin text-2xl block mb-2"></i><p class="text-sm">Loading...</p></div>';
+
+  fetch('/super-admin/api/assessment/' + assessmentId + '/evidence')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
       if (!data.success) {
-        content.innerHTML = `<div class="text-red-600 text-center">Error loading evidence: ${data.error}</div>`;
+        content.innerHTML = '<div class="text-red-600 text-center py-6">Error: ' + data.error + '</div>';
         return;
       }
-      
       if (data.evidence.length === 0) {
-        content.innerHTML = '<div class="text-center text-slate-400"><i class="fas fa-images text-4xl mb-2 block"></i><p>No evidence files uploaded.</p></div>';
+        content.innerHTML = '<div class="text-center text-slate-400 py-10"><i class="fas fa-images text-4xl mb-3 block"></i><p>No evidence files uploaded.</p></div>';
         return;
       }
-      
-      let html = '<div class="space-y-4">';
-      data.evidence.forEach(ev => {
-        const isPhoto = ev.file_type === 'photo';
-        html += `
-          <div class="border border-slate-100 rounded-xl overflow-hidden">
-            ${isPhoto ? 
-              `<a href="${ev.url}" target="_blank"><img src="${ev.url}" alt="${ev.file_name}" class="w-full h-auto hover:opacity-90 transition-opacity"></a>` :
-              `<div class="bg-slate-800 p-8 flex items-center justify-center"><a href="${ev.url}" target="_blank" class="text-white text-center"><i class="fas fa-play-circle text-4xl mb-2 block"></i><p class="text-sm">Play Video</p></a></div>`
-            }
-            <div class="p-3 bg-slate-50">
-              <p class="text-sm font-semibold text-slate-700 truncate">${ev.file_name}</p>
-              ${ev.caption ? `<p class="text-xs text-slate-500 mt-1 italic">${ev.caption}</p>` : ''}
-              <p class="text-xs text-slate-400 mt-1">${new Date(ev.uploaded_at).toLocaleDateString()}</p>
-            </div>
-          </div>
-        `;
+      var html = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
+      data.evidence.forEach(function(ev) {
+        var isPhoto = ev.file_type === 'photo';
+        html += '<div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm">';
+        if (isPhoto) {
+          html += '<a href="' + ev.url + '" target="_blank"><img src="' + ev.url + '" alt="' + ev.file_name + '" class="w-full h-40 object-cover hover:opacity-90 transition-opacity"></a>';
+        } else {
+          html += '<div class="bg-slate-800 h-40 flex items-center justify-center"><a href="' + ev.url + '" target="_blank" class="text-white text-center"><i class="fas fa-play-circle text-4xl mb-1 block opacity-80"></i><p class="text-xs">Play Video</p></a></div>';
+        }
+        html += '<div class="p-3 bg-slate-50">';
+        html += '<p class="text-xs font-semibold text-slate-700 truncate">' + ev.file_name + '</p>';
+        if (ev.caption) html += '<p class="text-xs text-slate-500 mt-0.5 italic">' + ev.caption + '</p>';
+        html += '<p class="text-xs text-slate-400 mt-1">' + new Date(ev.uploaded_at).toLocaleDateString() + '</p>';
+        html += '</div></div>';
       });
       html += '</div>';
       content.innerHTML = html;
     })
-    .catch(e => {
-      content.innerHTML = `<div class="text-red-600 text-center">Error: ${e.message}</div>`;
+    .catch(function(e) {
+      content.innerHTML = '<div class="text-red-600 text-center py-6">Error: ' + e.message + '</div>';
     });
 }
 
 function closeEvidence() {
   document.getElementById('evidenceModal').style.display = 'none';
 }
-
-// Close modal when clicking outside
-document.addEventListener('click', (e) => {
-  const modal = document.getElementById('evidenceModal');
-  if (e.target === modal) {
-    closeEvidence();
-  }
-});
 </script>
-{% comment %} Units list: show under main content so it appears on the dashboard {% endcomment %}
-<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
-  <div class="flex items-center justify-between mb-4">
-    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-      <i class="fas fa-book text-indigo-500"></i> Units (Quick Reports)
-    </h3>
-    <span class="text-xs text-slate-400">Download CSV per unit (limited)</span>
-  </div>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    {% for u in units_list %}
-    <div class="p-4 border rounded-xl flex items-center justify-between">
-      <div>
-        <p class="font-semibold text-slate-800 text-sm truncate">{{ u.name }}</p>
-      </div>
-      <div>
-        <a href="{{ url_for('super_admin.download_unit_report', unit_id=u.id) }}" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold">
-          <i class="fas fa-download mr-1"></i> Download
-        </a>
-      </div>
-    </div>
-    {% else %}
-    <div class="col-span-3 py-8 text-center text-slate-400">No units found.</div>
-    {% endfor %}
-  </div>
-</div>
-
 {% endblock %}
