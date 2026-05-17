@@ -44,4 +44,13 @@ def create_app():
     app.register_blueprint(trainer_bp,     url_prefix='/trainer')
     app.register_blueprint(trainee_bp,     url_prefix='/trainee')
 
+    @login_manager.user_loader
+    def load_user(user_id):
+        from app.models import User
+        return User.get(user_id)
+
     return app
+
+
+# WSGI entry point — used by gunicorn (e.g. Render: gunicorn app:app)
+app = create_app()
