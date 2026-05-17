@@ -7,7 +7,7 @@
 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 mb-8 text-white shadow-lg">
   <div class="flex items-center justify-between flex-wrap gap-4">
     <div>
-      <h2 class="text-2xl font-extrabold">Hello, {{ current_user.full_name.split()[0] }}! 👋</h2>
+      <h2 class="text-2xl font-extrabold">Hello, {{ (current_user.full_name or '').split()[0] if current_user.full_name and current_user.full_name.strip() else 'Trainee' }}! 👋</h2>
       <p class="text-indigo-200 mt-1 text-sm">
         Admission No: <span class="font-mono font-bold text-white">{{ current_user.admission_no or '—' }}</span>
       </p>

@@ -33,7 +33,9 @@ def trainee_required(f):
 def dashboard():
     db    = get_db()
     tid   = str(current_user.id)
-    stats = {}
+    stats = {'total': 0, 'pending': 0, 'approved': 0, 'rejected': 0}
+    recent = []
+    
     try:
         all_a = db.table('assessments').select('status').eq('trainee_id', tid).execute().data or []
         stats['total']    = len(all_a)
@@ -49,8 +51,10 @@ def dashboard():
                   .execute().data or [])
         for r in recent:
             r['script_file_size_fmt'] = format_bytes(r.get('script_file_size', 0))
+            ev = db.table('evidence').select('id').eq('assessment_id', r['id']).execute().data or []
+            r['evidence_count'] = len(ev)
     except Exception as e:
-        flash(f'Error: {e}', 'danger')
+        flash(f'Error loading dashboard: {str(e)}', 'danger')
         recent = []
 
     return render_template('trainee/dashboard.html', stats=stats, recent=recent)
