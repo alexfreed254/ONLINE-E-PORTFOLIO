@@ -215,12 +215,18 @@ def generate_unit_report_csv(unit_id: str, class_id: str = None, department_id: 
         assessments = q.execute().data or []
         
         # Filter by department if provided
+        # NOTE: Do NOT reference units.department_id (schema may not have that column).
         if department_id:
-            user_ids = [a['trainee_id'] for a in assessments]
-            if user_ids:
-                dept_users = db.table('users').select('id').eq('department_id', department_id).execute().data or []
-                dept_user_ids = {u['id'] for u in dept_users}
-                assessments = [a for a in assessments if a['trainee_id'] in dept_user_ids]
+            # Department-limited view is derived by filtering trainees (users) via their department_id.
+            if assessments:
+                dept_user_ids = {
+                    u['id'] for u in (db.table('users')
+                                    .select('id')
+                                    .eq('department_id', department_id)
+                                    .execute().data or [])
+                }
+                assessments = [a for a in assessments if a.get('trainee_id') in dept_user_ids]
+
         
         # Count evidence per trainee per assessment type
         trainee_data = {}
