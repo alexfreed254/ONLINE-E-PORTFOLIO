@@ -36,15 +36,19 @@ def delete_staff_auth_user(auth_user_id: str) -> None:
 
 def authenticate_staff(email: str, password: str):
     """
-  Staff login: Supabase Auth first, then legacy password_hash fallback.
-  Returns User profile or None.
+    Staff login: Supabase Auth first (if auth_user_id is set),
+    then legacy password_hash fallback.
+    Returns User profile or None.
     """
+    import logging
+    log = logging.getLogger(__name__)
+
     email = email.strip().lower()
     profile = User.get_by_email(email)
     if not profile or profile.role not in STAFF_ROLES:
         return None
 
-    # Supabase Auth (users created via Authentication → Add user)
+    # ── Path 1: Supabase Auth (users linked via auth_user_id) ──
     if profile.auth_user_id:
         try:
             client = get_auth_client()
@@ -54,10 +58,19 @@ def authenticate_staff(email: str, password: str):
             })
             if result and result.user:
                 return profile
-        except Exception:
+            # sign_in returned but no user — wrong password
             return None
+        except Exception as exc:
+            err = str(exc).lower()
+            # If it's clearly an invalid credentials error, reject immediately
+            if any(k in err for k in ('invalid', 'credentials', 'wrong', 'incorrect',
+                                       'email not confirmed', 'invalid login')):
+                log.warning('Supabase Auth rejected login for %s: %s', email, exc)
+                return None
+            # Otherwise it may be a network/config issue — fall through to legacy hash
+            log.warning('Supabase Auth error for %s (%s), trying legacy hash', email, exc)
 
-    # Legacy: password stored only in public.users
+    # ── Path 2: Legacy password_hash in public.users ──
     if profile.password_hash and check_password_hash(profile.password_hash, password):
         return profile
 

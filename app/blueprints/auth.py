@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from app.models import User
+from app.auth_service import authenticate_staff
 from app.db import get_db
 from app.utils import log_action
 from datetime import datetime
@@ -55,8 +56,11 @@ def login():
             if not email:
                 flash('Please enter your email address.', 'danger')
                 return render_template('auth/login.html', active_tab='staff')
-            user = User.get_by_email(email)
-            if not user or not check_password_hash(user.password_hash or '', password):
+
+            # Use authenticate_staff which handles both Supabase Auth
+            # (users with auth_user_id) and legacy password_hash fallback
+            user = authenticate_staff(email, password)
+            if not user:
                 flash('Invalid email or password.', 'danger')
                 return render_template('auth/login.html', active_tab='staff')
             if user.role == 'trainee':
