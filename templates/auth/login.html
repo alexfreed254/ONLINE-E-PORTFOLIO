@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Login — Thika TTI E-Portfolio{% endblock %}
+{% block title %}Login — Thika TTI Online E-Portfolio for Assessments{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 flex items-center justify-center p-4">
@@ -9,15 +9,11 @@
     <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
 
       <!-- Header -->
-      <div class="bg-gradient-to-r from-indigo-600 to-purple-700 p-8 text-center">
-        <div class="w-20 h-20 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-          <i class="fas fa-graduation-cap text-indigo-600 text-3xl"></i>
-        </div>
-        <h1 class="text-2xl font-extrabold text-white tracking-tight">Thika Technical</h1>
-        <p class="text-indigo-200 text-sm mt-0.5">Training Institute</p>
-        <div class="mt-3 inline-flex items-center gap-2 bg-white/20 text-white text-xs font-bold px-4 py-1.5 rounded-full">
-          <i class="fas fa-folder-open"></i> Online E-Portfolio System
-        </div>
+      <div class="bg-gradient-to-r from-indigo-600 to-purple-700 p-6 md:p-8 text-center border-b-4 border-indigo-400">
+        {% set size = 'lg' %}
+        {% set center = true %}
+        {% set text_class = 'text-white' %}
+        {% include 'includes/brand_header.html' %}
       </div>
 
       <!-- Tab switcher -->

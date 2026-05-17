@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}E-Portfolio — Thika TTI{% endblock %}</title>
+  <title>{% block title %}Thika TTI — Online E-Portfolio for Assessments{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -31,13 +31,14 @@
 {% if current_user.is_authenticated %}
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 <div class="flex min-h-screen">
-  <aside id="sidebar" class="w-64 flex-shrink-0 {% block sidebar_color %}{% if current_user.role == 'super_admin' %}bg-slate-900{% elif current_user.role == 'dept_admin' %}bg-violet-800{% elif current_user.role == 'trainer' %}bg-emerald-800{% else %}bg-indigo-700{% endif %}{% endblock %} text-white flex flex-col shadow-2xl">
-    <div class="p-5 border-b border-white/10 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 bg-white rounded-xl flex items-center justify-center flex-shrink-0"><i class="fas fa-graduation-cap text-indigo-700 text-base"></i></div>
-        <div><p class="font-extrabold text-sm leading-tight">Thika TTI</p><p class="text-xs opacity-60">E-Portfolio</p></div>
-      </div>
-      <button onclick="closeSidebar()" class="lg:hidden text-white/60 hover:text-white"><i class="fas fa-times text-lg"></i></button>
+  <aside id="sidebar" class="w-72 flex-shrink-0 {% block sidebar_color %}{% if current_user.role == 'super_admin' %}bg-slate-900{% elif current_user.role == 'dept_admin' %}bg-violet-800{% elif current_user.role == 'trainer' %}bg-emerald-800{% else %}bg-indigo-700{% endif %}{% endblock %} text-white flex flex-col shadow-2xl">
+    <div class="p-4 border-b border-white/10 relative">
+      {% set size = 'sm' %}
+      {% set text_class = 'text-white' %}
+      {% include 'includes/brand_header.html' %}
+      <button onclick="closeSidebar()" class="lg:hidden absolute top-3 right-3 text-white/60 hover:text-white">
+        <i class="fas fa-times text-lg"></i>
+      </button>
     </div>
     <div class="px-4 py-3 border-b border-white/10">
       <div class="flex items-center gap-2.5">
@@ -67,8 +68,13 @@
     <header class="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shadow-sm flex-shrink-0">
       <div class="flex items-center gap-3">
         <button onclick="openSidebar()" class="lg:hidden text-slate-500 hover:text-slate-700 mr-1"><i class="fas fa-bars text-lg"></i></button>
-        <div>
-          <h1 class="text-lg font-extrabold text-slate-800 leading-tight">{% block page_title %}Dashboard{% endblock %}</h1>
+        <div class="min-w-0 flex-1">
+          <div class="hidden lg:block mb-2">
+            {% set size = 'sm' %}
+            {% set text_class = 'text-indigo-950' %}
+            {% include 'includes/brand_header.html' %}
+          </div>
+          <h1 class="text-base font-extrabold text-slate-800 leading-tight">{% block page_title %}Dashboard{% endblock %}</h1>
           <p class="text-xs text-slate-400">{% block page_subtitle %}{% endblock %}</p>
         </div>
       </div>
