@@ -37,6 +37,7 @@
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Type</th>
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Status</th>
           <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Date</th>
+          <th class="text-left py-2 px-3 text-xs font-bold text-slate-400 uppercase">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -55,6 +56,21 @@
             </span>
           </td>
           <td class="py-2 px-3 text-xs text-slate-400">{{ a.uploaded_at[:10] if a.uploaded_at else '—' }}</td>
+          <td class="py-2 px-3">
+            <div class="flex items-center gap-1.5">
+              {% if a.script_file_path %}
+              <a href="{{ storage_url(BUCKET_SCRIPTS, a.script_file_path) }}" target="_blank" title="View PDF Script"
+                class="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-md transition-colors flex items-center gap-1">
+                <i class="fas fa-file-pdf"></i> PDF
+              </a>
+              {% endif %}
+              {% if a.evidence_count > 0 %}
+              <button onclick="viewEvidence('{{ a.id }}')" title="Evidence files" class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 text-xs font-bold rounded-md transition-colors cursor-pointer">
+                <i class="fas fa-images"></i> {{ a.evidence_count }}
+              </button>
+              {% endif %}
+            </div>
+          </td>
         </tr>
         {% else %}
         <tr><td colspan="6" class="py-8 text-center text-slate-400 text-sm">No submissions yet.</td></tr>
@@ -63,4 +79,79 @@
     </table>
   </div>
 </div>
+
+<!-- Evidence Modal -->
+<div id="evidenceModal" style="display:none;" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white border-b border-slate-100 p-6 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-slate-800">Assessment Evidence</h2>
+      <button onclick="closeEvidence()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+    </div>
+    <div id="evidenceContent" class="p-6">
+      <div class="text-center text-slate-400">
+        <div class="inline-block animate-spin">
+          <i class="fas fa-spinner text-2xl"></i>
+        </div>
+        <p class="mt-2">Loading evidence files...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function viewEvidence(assessmentId) {
+  const modal = document.getElementById('evidenceModal');
+  const content = document.getElementById('evidenceContent');
+  modal.style.display = 'flex';
+  
+  fetch(`{{ url_for('dept_admin.api_assessment_evidence', assessment_id='') }}${assessmentId}`)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        content.innerHTML = `<div class="text-red-600 text-center">Error loading evidence: ${data.error}</div>`;
+        return;
+      }
+      
+      if (data.evidence.length === 0) {
+        content.innerHTML = '<div class="text-center text-slate-400"><i class="fas fa-images text-4xl mb-2 block"></i><p>No evidence files uploaded.</p></div>';
+        return;
+      }
+      
+      let html = '<div class="space-y-4">';
+      data.evidence.forEach(ev => {
+        const isPhoto = ev.file_type === 'photo';
+        html += `
+          <div class="border border-slate-100 rounded-xl overflow-hidden">
+            ${isPhoto ? 
+              `<a href="${ev.url}" target="_blank"><img src="${ev.url}" alt="${ev.file_name}" class="w-full h-auto hover:opacity-90 transition-opacity"></a>` :
+              `<div class="bg-slate-800 p-8 flex items-center justify-center"><a href="${ev.url}" target="_blank" class="text-white text-center"><i class="fas fa-play-circle text-4xl mb-2 block"></i><p class="text-sm">Play Video</p></a></div>`
+            }
+            <div class="p-3 bg-slate-50">
+              <p class="text-sm font-semibold text-slate-700 truncate">${ev.file_name}</p>
+              ${ev.caption ? `<p class="text-xs text-slate-500 mt-1 italic">${ev.caption}</p>` : ''}
+              <p class="text-xs text-slate-400 mt-1">${new Date(ev.uploaded_at).toLocaleDateString()}</p>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      content.innerHTML = html;
+    })
+    .catch(e => {
+      content.innerHTML = `<div class="text-red-600 text-center">Error: ${e.message}</div>`;
+    });
+}
+
+function closeEvidence() {
+  document.getElementById('evidenceModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('evidenceModal');
+  if (e.target === modal) {
+    closeEvidence();
+  }
+});
+</script>
 {% endblock %}

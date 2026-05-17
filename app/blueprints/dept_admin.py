@@ -64,6 +64,11 @@ def dashboard():
                   .order('uploaded_at', desc=True)
                   .limit(10)
                   .execute().data or [])
+        
+        # Add evidence count to each assessment
+        for a in recent:
+            ev = db.table('evidence').select('id').eq('assessment_id', a['id']).execute().data or []
+            a['evidence_count'] = len(ev)
     except Exception as e:
         flash(f'Error: {e}', 'danger')
         recent = []
@@ -372,3 +377,28 @@ def api_class_units(class_id):
             .execute().data or [])
     units = [r['units'] for r in rows if r.get('units')]
     return jsonify({'units': units})
+
+# ─────────────────────────────────────────────────────────────
+# API: GET EVIDENCE FOR ASSESSMENT
+# ─────────────────────────────────────────────────────────────
+@dept_admin_bp.route('/api/assessment/<assessment_id>/evidence')
+@login_required
+@dept_admin_required
+def api_assessment_evidence(assessment_id):
+    """Return evidence files for an assessment as JSON."""
+    db = get_db()
+    try:
+        evidence = (db.table('evidence')
+                    .select('*')
+                    .eq('assessment_id', assessment_id)
+                    .order('uploaded_at')
+                    .execute().data or [])
+        
+        # Build URLs for each evidence file
+        from app.utils import get_storage_public_url, STORAGE_BUCKET_EVIDENCE
+        for ev in evidence:
+            ev['url'] = get_storage_public_url(STORAGE_BUCKET_EVIDENCE, ev.get('file_path', ''))
+        
+        return jsonify({'success': True, 'evidence': evidence})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

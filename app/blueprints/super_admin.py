@@ -29,6 +29,7 @@ def super_admin_required(f):
 def dashboard():
     db = get_db()
     stats = {}
+    recent_assessments = []
     try:
         stats['departments'] = len(db.table('departments').select('id').execute().data or [])
         stats['users']       = len(db.table('users').select('id').execute().data or [])
@@ -47,6 +48,18 @@ def dashboard():
         stats['approved'] = sum(1 for a in all_assess if a['status'] == 'approved')
         stats['rejected'] = sum(1 for a in all_assess if a['status'] == 'rejected')
 
+        # Recent assessments with trainee info
+        recent_assessments = (db.table('assessments')
+                             .select('*, users!assessments_trainee_id_fkey(full_name, admission_no), units(name), classes(name)')
+                             .order('uploaded_at', desc=True)
+                             .limit(10)
+                             .execute().data or [])
+        
+        # Add evidence count to each assessment
+        for a in recent_assessments:
+            ev = db.table('evidence').select('id').eq('assessment_id', a['id']).execute().data or []
+            a['evidence_count'] = len(ev)
+
         # Recent logs
         recent_logs = (db.table('system_logs')
                        .select('*, users(full_name, role)')
@@ -57,7 +70,7 @@ def dashboard():
         flash(f'Error loading dashboard: {e}', 'danger')
         recent_logs = []
 
-    return render_template('super_admin/dashboard.html', stats=stats, recent_logs=recent_logs)
+    return render_template('super_admin/dashboard.html', stats=stats, recent_assessments=recent_assessments, recent_logs=recent_logs)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -273,3 +286,28 @@ def assessments():
         q = q.eq('status', status)
     data = q.order('uploaded_at', desc=True).execute().data or []
     return render_template('super_admin/assessments.html', assessments=data, status_filter=status)
+
+# ─────────────────────────────────────────────────────────────
+# API: GET EVIDENCE FOR ASSESSMENT
+# ─────────────────────────────────────────────────────────────
+@super_admin_bp.route('/api/assessment/<assessment_id>/evidence')
+@login_required
+@super_admin_required
+def api_assessment_evidence(assessment_id):
+    """Return evidence files for an assessment as JSON."""
+    db = get_db()
+    try:
+        evidence = (db.table('evidence')
+                    .select('*')
+                    .eq('assessment_id', assessment_id)
+                    .order('uploaded_at')
+                    .execute().data or [])
+        
+        # Build URLs for each evidence file
+        from app.utils import get_storage_public_url, STORAGE_BUCKET_EVIDENCE
+        for ev in evidence:
+            ev['url'] = get_storage_public_url(STORAGE_BUCKET_EVIDENCE, ev.get('file_path', ''))
+        
+        return jsonify({'success': True, 'evidence': evidence})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
