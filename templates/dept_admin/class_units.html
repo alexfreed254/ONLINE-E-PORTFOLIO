@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% block title %}Assign Units to Class{% endblock %}
 {% block page_title %}Assign Units{% endblock %}
-{% block sidebar_color %}bg-violet-800{% endblock %}
+{% block sidebar_color %}bg-slate-900{% endblock %}
 {% block sidebar_nav %}
-<a href="{{ url_for('dept_admin.dashboard') }}" class="sidebar-link text-violet-200"><i class="fas fa-th-large w-5 text-center"></i> Dashboard</a>
-<a href="{{ url_for('dept_admin.classes') }}" class="sidebar-link text-violet-100 active"><i class="fas fa-chalkboard w-5 text-center"></i> Classes</a>
-<a href="{{ url_for('dept_admin.trainers') }}" class="sidebar-link text-violet-200"><i class="fas fa-chalkboard-teacher w-5 text-center"></i> Trainers</a>
-<a href="{{ url_for('dept_admin.trainees') }}" class="sidebar-link text-violet-200"><i class="fas fa-user-graduate w-5 text-center"></i> Trainees</a>
+<a href="{{ url_for('dept_admin.dashboard') }}" class="sidebar-link text-slate-300"><i class="fas fa-th-large w-5 text-center"></i> Dashboard</a>
+<a href="{{ url_for('dept_admin.classes') }}" class="sidebar-link text-slate-100 active"><i class="fas fa-chalkboard w-5 text-center"></i> Classes</a>
+<a href="{{ url_for('dept_admin.trainers') }}" class="sidebar-link text-slate-300"><i class="fas fa-chalkboard-teacher w-5 text-center"></i> Trainers</a>
+<a href="{{ url_for('dept_admin.trainees') }}" class="sidebar-link text-slate-300"><i class="fas fa-user-graduate w-5 text-center"></i> Trainees</a>
 {% endblock %}
 {% block page_subtitle %}{{ cls.name }}{% endblock %}
 {% block content %}

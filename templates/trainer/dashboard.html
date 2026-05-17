@@ -2,7 +2,7 @@
 {% block title %}Trainer Dashboard{% endblock %}
 {% block page_title %}Trainer Dashboard{% endblock %}
 {% block page_subtitle %}Welcome, {{ current_user.full_name }}{% endblock %}
-{% block sidebar_color %}bg-emerald-800{% endblock %}
+{% block sidebar_color %}bg-slate-900{% endblock %}
 
 {% block sidebar_stats %}
 <div class="sidebar-stat">
@@ -29,13 +29,13 @@
 {% endblock %}
 
 {% block sidebar_nav %}
-<a href="{{ url_for('trainer.dashboard') }}" class="sidebar-link text-emerald-100 active">
+<a href="{{ url_for('trainer.dashboard') }}" class="sidebar-link text-slate-100 active">
   <i class="fas fa-th-large w-5 text-center"></i> Dashboard
 </a>
-<a href="{{ url_for('trainer.browse') }}" class="sidebar-link text-emerald-200">
+<a href="{{ url_for('trainer.browse') }}" class="sidebar-link text-slate-300">
   <i class="fas fa-folder-tree w-5 text-center"></i> Browse
 </a>
-<a href="{{ url_for('trainer.search') }}" class="sidebar-link text-emerald-200">
+<a href="{{ url_for('trainer.search') }}" class="sidebar-link text-slate-300">
   <i class="fas fa-search w-5 text-center"></i> Search
 </a>
 {% endblock %}
@@ -56,7 +56,7 @@
   <div class="bg-white rounded-2xl p-6 border-l-4 border-emerald-500 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Approved</p>
     <p class="text-3xl font-black text-emerald-600 mt-1">{{ stats.approved }}</p>
-    <i class="fas fa-check-circle text-emerald-200 text-2xl mt-2"></i>
+    <i class="fas fa-check-circle text-slate-300 text-2xl mt-2"></i>
   </div>
   <div class="bg-white rounded-2xl p-6 border-l-4 border-red-400 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Rejected</p>
@@ -92,7 +92,7 @@
         </div>
       </div>
       <a href="{{ url_for('trainer.assessment_detail', assessment_id=a.id) }}"
-        class="flex-shrink-0 ml-3 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors">
+        class="flex-shrink-0 ml-3 px-3 py-1.5 bg-indigo-600 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition-colors">
         <i class="fas fa-eye mr-1"></i> Review
       </a>
     </div>

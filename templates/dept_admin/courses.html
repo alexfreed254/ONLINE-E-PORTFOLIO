@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}Courses{% endblock %}
 {% block page_title %}Course Management{% endblock %}
-{% block sidebar_color %}bg-violet-800{% endblock %}
+{% block sidebar_color %}bg-slate-900{% endblock %}
 {% block sidebar_nav %}
-<a href="{{ url_for('dept_admin.dashboard') }}" class="sidebar-link text-violet-200"><i class="fas fa-th-large w-5 text-center"></i> Dashboard</a>
-<a href="{{ url_for('dept_admin.courses') }}" class="sidebar-link text-violet-100 active"><i class="fas fa-book w-5 text-center"></i> Courses</a>
-<a href="{{ url_for('dept_admin.units') }}" class="sidebar-link text-violet-200"><i class="fas fa-list-check w-5 text-center"></i> Units</a>
-<a href="{{ url_for('dept_admin.classes') }}" class="sidebar-link text-violet-200"><i class="fas fa-chalkboard w-5 text-center"></i> Classes</a>
-<a href="{{ url_for('dept_admin.trainers') }}" class="sidebar-link text-violet-200"><i class="fas fa-chalkboard-teacher w-5 text-center"></i> Trainers</a>
-<a href="{{ url_for('dept_admin.trainees') }}" class="sidebar-link text-violet-200"><i class="fas fa-user-graduate w-5 text-center"></i> Trainees</a>
+<a href="{{ url_for('dept_admin.dashboard') }}" class="sidebar-link text-slate-300"><i class="fas fa-th-large w-5 text-center"></i> Dashboard</a>
+<a href="{{ url_for('dept_admin.courses') }}" class="sidebar-link text-slate-100 active"><i class="fas fa-book w-5 text-center"></i> Courses</a>
+<a href="{{ url_for('dept_admin.units') }}" class="sidebar-link text-slate-300"><i class="fas fa-list-check w-5 text-center"></i> Units</a>
+<a href="{{ url_for('dept_admin.classes') }}" class="sidebar-link text-slate-300"><i class="fas fa-chalkboard w-5 text-center"></i> Classes</a>
+<a href="{{ url_for('dept_admin.trainers') }}" class="sidebar-link text-slate-300"><i class="fas fa-chalkboard-teacher w-5 text-center"></i> Trainers</a>
+<a href="{{ url_for('dept_admin.trainees') }}" class="sidebar-link text-slate-300"><i class="fas fa-user-graduate w-5 text-center"></i> Trainees</a>
 {% endblock %}
 {% block content %}
 <div class="grid lg:grid-cols-3 gap-6">

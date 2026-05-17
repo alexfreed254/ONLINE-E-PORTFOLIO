@@ -8,7 +8,7 @@
   <div class="flex items-center justify-between flex-wrap gap-4">
     <div>
       <h2 class="text-2xl font-extrabold">Hello, {{ (current_user.full_name or '').split()[0] if current_user.full_name and current_user.full_name.strip() else 'Trainee' }}! 👋</h2>
-      <p class="text-indigo-200 mt-1 text-sm">
+      <p class="text-slate-300 mt-1 text-sm">
         Admission No: <span class="font-mono font-bold text-white">{{ current_user.admission_no or '—' }}</span>
       </p>
     </div>
@@ -34,7 +34,7 @@
   <div class="bg-white rounded-2xl p-6 border-l-4 border-emerald-500 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Approved</p>
     <p class="text-3xl font-black text-emerald-600 mt-1">{{ stats.approved }}</p>
-    <i class="fas fa-check-circle text-emerald-200 text-2xl mt-2"></i>
+    <i class="fas fa-check-circle text-slate-300 text-2xl mt-2"></i>
   </div>
   <div class="bg-white rounded-2xl p-6 border-l-4 border-red-400 shadow-sm">
     <p class="text-xs font-bold text-slate-400 uppercase">Rejected</p>

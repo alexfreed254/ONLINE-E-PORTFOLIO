@@ -26,7 +26,7 @@
     <i class="fas fa-times-circle"></i> Rejected ({{ counts.rejected }})
   </a>
   <a href="{{ url_for('trainee.upload') }}"
-    class="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">
+    class="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-slate-900 transition-all">
     <i class="fas fa-plus"></i> Upload New
   </a>
 </div>
@@ -86,7 +86,7 @@
       <div class="flex flex-col gap-2 flex-shrink-0">
         {% if a.script_file_path %}
         <a href="{{ storage_url(BUCKET_SCRIPTS, a.script_file_path) }}" target="_blank"
-          class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5">
+          class="px-3 py-2 bg-indigo-600 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5">
           <i class="fas fa-eye"></i> View PDF
         </a>
         {% endif %}
@@ -113,7 +113,7 @@
           </button>
         </form>
         <a href="{{ url_for('trainee.upload') }}"
-          class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition-all active:scale-95">
+          class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-slate-900 text-white text-xs font-bold rounded-lg shadow transition-all active:scale-95">
           <i class="fas fa-cloud-upload-alt"></i> Re-Upload
         </a>
       </div>
@@ -129,7 +129,7 @@
     <a href="{{ url_for('trainee.my_files') }}" class="inline-block mt-3 text-indigo-600 font-bold text-sm hover:underline">View all files</a>
     {% else %}
     <a href="{{ url_for('trainee.upload') }}"
-      class="inline-flex items-center gap-2 mt-4 bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-indigo-700 transition-all text-sm">
+      class="inline-flex items-center gap-2 mt-4 bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-900 transition-all text-sm">
       <i class="fas fa-cloud-upload-alt"></i> Upload your first assessment
     </a>
     {% endif %}
