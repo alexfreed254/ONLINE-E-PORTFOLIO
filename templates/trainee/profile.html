@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block page_subtitle %}Passport image and account details{% endblock %}
+
+{% block content %}
+<div class="grid lg:grid-cols-3 gap-6">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+      <i class="fas fa-id-badge text-indigo-500"></i> Passport Image
+    </h3>
+
+    <div class="aspect-[3/4] rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center mb-4">
+      {% if passport_url %}
+      <img src="{{ passport_url }}" alt="{{ current_user.full_name }} passport image"
+        class="w-full h-full object-cover"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+      <div class="hidden w-full h-full items-center justify-center text-slate-400">
+        <i class="fas fa-user text-5xl"></i>
+      </div>
+      {% else %}
+      <div class="text-center text-slate-400">
+        <i class="fas fa-user text-5xl mb-3 block"></i>
+        <p class="text-xs font-semibold">No passport image</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Upload Passport Image</label>
+        <input type="file" name="passport_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required
+          class="w-full text-sm text-slate-600 border-2 border-dashed border-slate-300 rounded-xl px-3 py-3
+                 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700
+                 hover:border-indigo-400 cursor-pointer transition-colors">
+      </div>
+      <button type="submit"
+        class="w-full bg-indigo-600 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition-all text-sm">
+        <i class="fas fa-upload mr-2"></i> Save Passport Image
+      </button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <h3 class="text-sm font-bold text-slate-700 mb-5 flex items-center gap-2">
+      <i class="fas fa-user-graduate text-indigo-500"></i> Trainee Details
+    </h3>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <p class="text-xs font-bold text-slate-400 uppercase">Full Name</p>
+        <p class="font-bold text-slate-800 mt-1">{{ current_user.full_name }}</p>
+      </div>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <p class="text-xs font-bold text-slate-400 uppercase">Admission Number</p>
+        <p class="font-mono font-bold text-indigo-700 mt-1">{{ current_user.admission_no }}</p>
+      </div>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <p class="text-xs font-bold text-slate-400 uppercase">WhatsApp Number</p>
+        <p class="font-semibold text-slate-700 mt-1">{{ current_user.mobile_number or 'Not provided' }}</p>
+      </div>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <p class="text-xs font-bold text-slate-400 uppercase">Account Status</p>
+        <p class="font-bold text-slate-800 mt-1">
+          {% if current_user.must_change_password %}Temporary password{% else %}Active{% endif %}
+        </p>
+      </div>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <p class="text-xs font-bold text-slate-400 uppercase">Passport File</p>
+        <p class="font-semibold text-slate-700 mt-1 truncate">{{ current_user.passport_file_name or 'Not uploaded' }}</p>
+      </div>
+    </div>
+
+    <form method="POST" class="mt-6 p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
+      <input type="hidden" name="form_action" value="details">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Update WhatsApp Number</label>
+        <input type="tel" name="mobile_number" value="{{ current_user.mobile_number or '' }}" required
+          placeholder="e.g. 0712345678 or +254712345678"
+          class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none text-sm">
+      </div>
+      <button type="submit"
+        class="bg-indigo-600 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl transition-all text-sm">
+        <i class="fas fa-save mr-2"></i> Update Profile
+      </button>
+    </form>
+
+    <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+      <p class="text-xs text-amber-800 leading-relaxed">
+        <i class="fas fa-info-circle mr-1"></i>
+        Your admission number and registered name are controlled by the institution. You can update your WhatsApp number and passport image here.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

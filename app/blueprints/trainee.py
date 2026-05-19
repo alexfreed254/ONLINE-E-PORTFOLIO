@@ -6,12 +6,15 @@ from app.db import get_db
 from app.utils import (
     log_action, format_bytes, allowed_pdf, allowed_media,
     upload_to_storage, delete_from_storage,
-    STORAGE_BUCKET_SCRIPTS, STORAGE_BUCKET_EVIDENCE,
+    get_storage_public_url, STORAGE_BUCKET_SCRIPTS, STORAGE_BUCKET_EVIDENCE,
     build_assessment_filename, secure_unique_filename
 )
 import uuid
+import re
 
 trainee_bp = Blueprint('trainee', __name__)
+
+ALLOWED_PASSPORT_IMAGES = {'jpg', 'jpeg', 'png', 'webp'}
 
 
 def trainee_required(f):
@@ -22,6 +25,23 @@ def trainee_required(f):
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated
+
+
+def _allowed_passport_image(filename: str) -> bool:
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_PASSPORT_IMAGES
+
+
+def _image_content_type(ext: str) -> str:
+    if ext == 'jpg':
+        ext = 'jpeg'
+    return f'image/{ext}'
+
+
+def _clean_mobile_number(value: str) -> str:
+    value = (value or '').strip()
+    if value.startswith('+'):
+        return '+' + re.sub(r'\D', '', value[1:])
+    return re.sub(r'\D', '', value)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -58,6 +78,70 @@ def dashboard():
         recent = []
 
     return render_template('trainee/dashboard.html', stats=stats, recent=recent)
+
+
+# ─────────────────────────────────────────────────────────────
+# PROFILE / PASSPORT PHOTO
+# ─────────────────────────────────────────────────────────────
+@trainee_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+@trainee_required
+def profile():
+    db = get_db()
+
+    if request.method == 'POST':
+        form_action = request.form.get('form_action', 'passport')
+        if form_action == 'details':
+            mobile_number = _clean_mobile_number(request.form.get('mobile_number', ''))
+            if not mobile_number or len(re.sub(r'\D', '', mobile_number)) < 10:
+                flash('Enter a valid WhatsApp number.', 'danger')
+                return redirect(url_for('trainee.profile'))
+            try:
+                db.table('users').update({
+                    'mobile_number': mobile_number,
+                }).eq('id', str(current_user.id)).execute()
+                log_action('UPDATE_PROFILE', 'user', current_user.id, 'Updated WhatsApp number')
+                flash('Profile updated.', 'success')
+            except Exception as e:
+                flash(f'Could not update profile: {e}', 'danger')
+            return redirect(url_for('trainee.profile'))
+
+        passport = request.files.get('passport_image')
+        if not passport or passport.filename == '':
+            flash('Please select a passport image.', 'danger')
+            return redirect(url_for('trainee.profile'))
+        if not _allowed_passport_image(passport.filename):
+            flash('Passport image must be JPG, PNG, or WEBP.', 'danger')
+            return redirect(url_for('trainee.profile'))
+
+        ext = passport.filename.rsplit('.', 1)[-1].lower()
+        unique_fn = secure_unique_filename(passport.filename)
+        storage_path = f"passports/{current_user.admission_no}/{unique_fn}"
+        file_bytes = passport.read()
+
+        try:
+            upload_to_storage(STORAGE_BUCKET_EVIDENCE, storage_path, file_bytes, _image_content_type(ext))
+        except Exception as e:
+            flash(f'Passport upload failed: {e}', 'danger')
+            return redirect(url_for('trainee.profile'))
+
+        try:
+            old_path = current_user.passport_file_path
+            db.table('users').update({
+                'passport_file_path': storage_path,
+                'passport_file_name': passport.filename,
+            }).eq('id', str(current_user.id)).execute()
+            if old_path:
+                delete_from_storage(STORAGE_BUCKET_EVIDENCE, old_path)
+            log_action('UPDATE_PASSPORT', 'user', current_user.id)
+            flash('Passport image updated.', 'success')
+        except Exception as e:
+            delete_from_storage(STORAGE_BUCKET_EVIDENCE, storage_path)
+            flash(f'Could not save passport image: {e}', 'danger')
+        return redirect(url_for('trainee.profile'))
+
+    passport_url = get_storage_public_url(STORAGE_BUCKET_EVIDENCE, current_user.passport_file_path or '')
+    return render_template('trainee/profile.html', passport_url=passport_url)
 
 
 # ─────────────────────────────────────────────────────────────

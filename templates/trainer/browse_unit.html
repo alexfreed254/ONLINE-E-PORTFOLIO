@@ -95,6 +95,17 @@
           </button>
         </form>
         {% endif %}
+        {% if a.status == 'rejected' and a.users and a.users.mobile_number %}
+        {% set contact_message = 'Hello ' ~ a.users.full_name ~ ', your ' ~ a.assessment_type ~ ' assessment #' ~ a.assessment_no ~ ' for ' ~ unit.name ~ ' has been rejected. Reason: ' ~ (a.review_note or 'Please review the trainer feedback and upload the correct file.') %}
+        <a href="sms:{{ a.users.mobile_number }}?body={{ contact_message|urlencode }}"
+          class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1">
+          <i class="fas fa-comment-dots"></i> Send Message
+        </a>
+        {% elif a.status == 'rejected' %}
+        <span class="px-3 py-2 bg-slate-100 text-slate-400 text-xs font-bold rounded-xl">
+          <i class="fas fa-phone-slash"></i>
+        </span>
+        {% endif %}
         <form method="POST" action="{{ url_for('trainer.delete_assessment', assessment_id=a.id) }}"
           onsubmit="return confirm('Permanently delete this assessment and all evidence?')" class="inline">
           <button type="submit" class="px-3 py-2 bg-slate-700 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors">

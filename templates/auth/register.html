@@ -181,9 +181,24 @@
           <p style="color:rgba(255,255,255,0.75);font-size:0.78rem;line-height:1.6;margin:0;">
             <i class="fas fa-info-circle mr-1" style="color:#60a5fa;"></i>
             Your admission number and full name must already be registered by your Department Admin.
-            Enter them below along with a new password to activate your account.
+            If they match, the system will give you a temporary password for first login.
           </p>
         </div>
+
+        {% if issued_temp_password %}
+        <div class="info-box mb-5" style="background:rgba(34,197,94,0.12);border-color:rgba(34,197,94,0.35);">
+          <p style="color:rgba(255,255,255,0.8);font-size:0.78rem;line-height:1.6;margin:0 0 8px;">
+            <i class="fas fa-check-circle mr-1" style="color:#22c55e;"></i>
+            Account verified for admission number <strong>{{ issued_admission_no }}</strong>.
+          </p>
+          <div style="background:rgba(0,0,0,0.25);border-radius:8px;padding:10px 12px;color:#fff;font-family:'Courier New',monospace;font-weight:800;letter-spacing:0.08em;text-align:center;">
+            {{ issued_temp_password }}
+          </div>
+          <p style="color:rgba(255,255,255,0.6);font-size:0.7rem;line-height:1.5;margin:8px 0 0;">
+            Use this temporary password on the Trainee Login tab. You will be asked to change it immediately.
+          </p>
+        </div>
+        {% endif %}
 
         <form method="POST" action="{{ url_for('auth.register') }}" class="space-y-4" id="reg-form">
 
@@ -215,63 +230,23 @@
             </p>
           </div>
 
-          <!-- Temporary Password -->
+          <!-- WhatsApp Number -->
           <div>
-            <label class="reg-label">Temporary Password</label>
+            <label class="reg-label">WhatsApp Number</label>
             <div class="input-wrap">
-              <i class="fas fa-key input-icon"></i>
-              <input type="password" name="temp_password" id="temp-pw"
+              <i class="fas fa-phone input-icon"></i>
+              <input type="tel" name="mobile_number" required
                 class="reg-input"
-                placeholder="Temporary password from admin (optional)">
-              <button type="button" class="input-eye" onclick="togglePw('temp-pw','temp-pw-icon')">
-                <i class="fas fa-eye" id="temp-pw-icon"></i>
-              </button>
+                placeholder="e.g. 0712345678 or +254712345678">
             </div>
             <p style="color:rgba(255,255,255,0.35);font-size:0.7rem;margin-top:5px;">
-              Leave blank if you don't have one — your name + admission number is enough to verify you.
+              Trainers will use this WhatsApp number to contact you if an assessment is rejected.
             </p>
-          </div>
-
-          <!-- New Password -->
-          <div>
-            <label class="reg-label">New Password</label>
-            <div class="input-wrap">
-              <i class="fas fa-lock input-icon"></i>
-              <input type="password" name="password" id="new-pw" required
-                minlength="8"
-                class="reg-input"
-                placeholder="At least 8 characters"
-                oninput="checkStrength(this.value)">
-              <button type="button" class="input-eye" onclick="togglePw('new-pw','new-pw-icon')">
-                <i class="fas fa-eye" id="new-pw-icon"></i>
-              </button>
-            </div>
-            <!-- Strength bar -->
-            <div class="strength-bar">
-              <div class="strength-fill" id="strength-fill"></div>
-            </div>
-            <p id="strength-label" style="color:rgba(255,255,255,0.3);font-size:0.68rem;margin-top:4px;"></p>
-          </div>
-
-          <!-- Confirm Password -->
-          <div>
-            <label class="reg-label">Confirm New Password</label>
-            <div class="input-wrap">
-              <i class="fas fa-lock input-icon"></i>
-              <input type="password" name="confirm_password" id="confirm-pw" required
-                class="reg-input"
-                placeholder="Re-enter your new password"
-                oninput="checkMatch()">
-              <button type="button" class="input-eye" onclick="togglePw('confirm-pw','confirm-pw-icon')">
-                <i class="fas fa-eye" id="confirm-pw-icon"></i>
-              </button>
-            </div>
-            <p id="match-label" style="font-size:0.68rem;margin-top:4px;"></p>
           </div>
 
           <div style="padding-top:6px;">
             <button type="submit" class="btn-register">
-              <i class="fas fa-check-circle mr-2"></i> ACTIVATE ACCOUNT
+              <i class="fas fa-key mr-2"></i> GET TEMPORARY PASSWORD
             </button>
           </div>
         </form>
@@ -279,7 +254,7 @@
         <!-- Back to login -->
         <div style="margin-top:20px;text-align:center;">
           <a href="{{ url_for('auth.login') }}?tab=trainee" class="back-link">
-            <i class="fas fa-arrow-left" style="font-size:0.7rem;"></i> Back to Login
+            <i class="fas fa-arrow-left" style="font-size:0.7rem;"></i> Go to Trainee Login
           </a>
         </div>
       </div>
@@ -293,49 +268,5 @@
 </div>
 
 <script>
-function togglePw(inputId, iconId) {
-  var inp  = document.getElementById(inputId);
-  var icon = document.getElementById(iconId);
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    icon.className = 'fas fa-eye-slash';
-  } else {
-    inp.type = 'password';
-    icon.className = 'fas fa-eye';
-  }
-}
-
-function checkStrength(pw) {
-  var fill  = document.getElementById('strength-fill');
-  var label = document.getElementById('strength-label');
-  var score = 0;
-  if (pw.length >= 8)  score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-
-  var pct    = (score / 5) * 100;
-  var colors = ['#ef4444','#f97316','#eab308','#22c55e','#16a34a'];
-  var labels = ['Very weak','Weak','Fair','Strong','Very strong'];
-  fill.style.width      = pct + '%';
-  fill.style.background = colors[score - 1] || '#ef4444';
-  label.textContent     = pw.length ? labels[score - 1] || '' : '';
-  label.style.color     = colors[score - 1] || 'rgba(255,255,255,0.3)';
-}
-
-function checkMatch() {
-  var pw      = document.getElementById('new-pw').value;
-  var confirm = document.getElementById('confirm-pw').value;
-  var label   = document.getElementById('match-label');
-  if (!confirm) { label.textContent = ''; return; }
-  if (pw === confirm) {
-    label.textContent = '✓ Passwords match';
-    label.style.color = '#22c55e';
-  } else {
-    label.textContent = '✗ Passwords do not match';
-    label.style.color = '#ef4444';
-  }
-}
 </script>
 {% endblock %}

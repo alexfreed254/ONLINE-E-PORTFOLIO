@@ -10,3 +10,7 @@
   class="sidebar-link text-slate-300 {% if request.endpoint == 'trainee.my_files' %}active{% endif %}">
   <i class="fas fa-folder-open w-5 text-center"></i> My Files
 </a>
+<a href="{{ url_for('trainee.profile') }}"
+  class="sidebar-link text-slate-300 {% if request.endpoint == 'trainee.profile' %}active{% endif %}">
+  <i class="fas fa-id-badge w-5 text-center"></i> Profile
+</a>

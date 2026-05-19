@@ -42,7 +42,16 @@
     </div>
     <div class="px-4 py-3 border-b border-white/10">
       <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-sm font-bold">{{ current_user.full_name[0].upper() }}</div>
+        <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-sm font-bold overflow-hidden">
+          {% if current_user.passport_file_path %}
+          <img src="{{ storage_url(BUCKET_EVIDENCE, current_user.passport_file_path) }}" alt="{{ current_user.full_name }} passport"
+            class="w-full h-full object-cover"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <span class="hidden w-full h-full items-center justify-center">{{ current_user.full_name[0].upper() }}</span>
+          {% else %}
+          {{ current_user.full_name[0].upper() }}
+          {% endif %}
+        </div>
         <div class="overflow-hidden">
           <p class="font-bold text-sm truncate leading-tight">{{ current_user.full_name }}</p>
           <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full capitalize">{{ current_user.role.replace('_',' ') }}</span>

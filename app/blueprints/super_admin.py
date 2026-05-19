@@ -163,15 +163,20 @@ def add_user():
     dep_id    = request.form.get('department_id') or None
     pw        = request.form.get('password', '').strip()
 
-    if not email or not full_name or not role:
-        flash('Email, name and role are required.', 'danger')
+    if not full_name or not role:
+        flash('Name and role are required.', 'danger')
         return redirect(url_for('super_admin.users'))
-    if len(pw) < 8:
+    if role != 'trainee' and not email:
+        flash('Email is required for staff accounts.', 'danger')
+        return redirect(url_for('super_admin.users'))
+    if role != 'trainee' and len(pw) < 8:
         flash('Password must be at least 8 characters.', 'danger')
         return redirect(url_for('super_admin.users'))
     if role == 'trainee' and (not adm_no or not adm_no.isdigit() or len(adm_no) != 5):
         flash('Trainees require a 5-digit admission number.', 'danger')
         return redirect(url_for('super_admin.users'))
+    if role == 'trainee' and not email:
+        email = f'{adm_no}@ttieportfolio.local'
 
     try:
         db.table('users').insert({
@@ -181,12 +186,16 @@ def add_user():
             'department_id': dep_id,
             'admission_no':  adm_no,
             'staff_no':      staff_no,
-            'password_hash': generate_password_hash(pw),
+            'password_hash': None if role == 'trainee' else generate_password_hash(pw),
+            'must_change_password': False,
             'created_by':    str(current_user.id),
             'is_active':     True,
         }).execute()
         log_action('CREATE_USER', 'user', None, f'{full_name} ({role})')
-        flash(f'User {full_name} created.', 'success')
+        if role == 'trainee':
+            flash(f'Trainee {full_name} created. They can activate using admission number and full name.', 'success')
+        else:
+            flash(f'User {full_name} created.', 'success')
     except Exception as e:
         flash(f'Error: {e}', 'danger')
     return redirect(url_for('super_admin.users'))
@@ -215,9 +224,12 @@ def reset_password(user_id):
         flash('Password must be at least 8 characters.', 'danger')
         return redirect(url_for('super_admin.users'))
     try:
-        get_db().table('users').update(
-            {'password_hash': generate_password_hash(new_pw)}
-        ).eq('id', user_id).execute()
+        db = get_db()
+        user = db.table('users').select('role').eq('id', user_id).single().execute().data
+        update_data = {'password_hash': generate_password_hash(new_pw)}
+        if user and user.get('role') == 'trainee':
+            update_data['must_change_password'] = True
+        db.table('users').update(update_data).eq('id', user_id).execute()
         log_action('RESET_PASSWORD', 'user', user_id)
         flash('Password reset successfully.', 'success')
     except Exception as e:

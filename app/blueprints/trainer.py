@@ -94,7 +94,7 @@ def dashboard():
         stats['rejected'] = sum(1 for a in all_a if a['status'] == 'rejected')
 
         q2 = (db.table('assessments')
-              .select('*, users!assessments_trainee_id_fkey(full_name, admission_no), units(name), classes(name)')
+              .select('*, users!assessments_trainee_id_fkey(full_name, admission_no, mobile_number), units(name), classes(name)')
               .eq('status', 'pending')
               .order('uploaded_at', desc=True)
               .limit(15))
@@ -190,7 +190,7 @@ def browse_unit(class_id, unit_id):
 
     status_filter = request.args.get('status', '')
     q = (db.table('assessments')
-         .select('*, users!assessments_trainee_id_fkey(full_name, admission_no)')
+         .select('*, users!assessments_trainee_id_fkey(full_name, admission_no, mobile_number)')
          .eq('class_id', class_id).eq('unit_id', unit_id))
     if status_filter:
         q = q.eq('status', status_filter)
@@ -215,7 +215,7 @@ def browse_unit(class_id, unit_id):
 def assessment_detail(assessment_id):
     db = get_db()
     a  = (db.table('assessments')
-          .select('*, users!assessments_trainee_id_fkey(full_name, admission_no, email), units(name), classes(name)')
+          .select('*, users!assessments_trainee_id_fkey(full_name, admission_no, email, mobile_number), units(name), classes(name)')
           .eq('id', assessment_id).single().execute().data)
     if not a:
         flash('Assessment not found.', 'danger')
@@ -411,7 +411,7 @@ def search_results():
         return jsonify({'assessments': [], 'total': 0})
 
     q = db.table('assessments').select(
-        '*, users!assessments_trainee_id_fkey(full_name, admission_no), units(name), classes(name)'
+        '*, users!assessments_trainee_id_fkey(full_name, admission_no, mobile_number), units(name), classes(name)'
     )
     if adm:
         trainees = db.table('users').select('id').eq('admission_no', adm).execute().data or []

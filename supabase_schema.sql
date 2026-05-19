@@ -27,8 +27,12 @@ CREATE TABLE users (
     role            TEXT NOT NULL CHECK (role IN ('super_admin','dept_admin','trainer','trainee')),
     department_id   UUID REFERENCES departments(id) ON DELETE SET NULL,
     admission_no    TEXT UNIQUE,          -- trainees only (5 digits)
+    mobile_number   TEXT,                 -- trainees: captured during first-time activation
     staff_no        TEXT UNIQUE,          -- trainers / dept_admins
     is_active       BOOLEAN DEFAULT TRUE,
+    must_change_password BOOLEAN DEFAULT FALSE,
+    passport_file_path TEXT,
+    passport_file_name TEXT,
     created_by      UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     last_login      TIMESTAMPTZ

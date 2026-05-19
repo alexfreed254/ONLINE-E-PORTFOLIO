@@ -6,11 +6,30 @@
 <!-- Welcome Banner -->
 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 mb-8 text-white shadow-lg">
   <div class="flex items-center justify-between flex-wrap gap-4">
-    <div>
+    <div class="flex items-center gap-4">
+      <div class="w-16 h-16 rounded-2xl bg-white/15 border border-white/20 overflow-hidden flex items-center justify-center flex-shrink-0">
+        {% if current_user.passport_file_path %}
+        <img src="{{ storage_url(BUCKET_EVIDENCE, current_user.passport_file_path) }}" alt="{{ current_user.full_name }} passport"
+          class="w-full h-full object-cover"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+        <div class="hidden w-full h-full items-center justify-center">
+          <i class="fas fa-user text-2xl text-white/70"></i>
+        </div>
+        {% else %}
+        <i class="fas fa-user text-2xl text-white/70"></i>
+        {% endif %}
+      </div>
+      <div>
       <h2 class="text-2xl font-extrabold">Hello, {{ (current_user.full_name or '').split()[0] if current_user.full_name and current_user.full_name.strip() else 'Trainee' }}! 👋</h2>
       <p class="text-slate-300 mt-1 text-sm">
         Admission No: <span class="font-mono font-bold text-white">{{ current_user.admission_no or '—' }}</span>
       </p>
+      {% if not current_user.passport_file_path %}
+      <a href="{{ url_for('trainee.profile') }}" class="inline-flex items-center gap-1 mt-2 text-xs font-bold text-white/90 hover:text-white underline">
+        <i class="fas fa-id-badge"></i> Add passport image
+      </a>
+      {% endif %}
+      </div>
     </div>
     <a href="{{ url_for('trainee.upload') }}"
       class="bg-white text-indigo-700 font-extrabold px-6 py-3 rounded-xl shadow hover:bg-indigo-50 transition-all text-sm flex items-center gap-2">

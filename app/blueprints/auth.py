@@ -8,6 +8,7 @@ from app.utils import log_action
 from datetime import datetime
 import secrets
 import string
+import re
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -17,6 +18,30 @@ STAFF_ROLES = ('super_admin', 'dept_admin', 'trainer')
 def _gen_temp_pw(length=10):
     chars = string.ascii_letters + string.digits + '!@#$'
     return ''.join(secrets.choice(chars) for _ in range(length))
+
+
+def _clean_name(value: str) -> str:
+    return ' '.join((value or '').strip().lower().split())
+
+
+def _clean_mobile_number(value: str) -> str:
+    value = (value or '').strip()
+    if value.startswith('+'):
+        return '+' + re.sub(r'\D', '', value[1:])
+    return re.sub(r'\D', '', value)
+
+
+@auth_bp.before_app_request
+def enforce_trainee_password_change():
+    if not current_user.is_authenticated:
+        return None
+    if current_user.role != 'trainee' or not getattr(current_user, 'must_change_password', False):
+        return None
+    allowed = {'auth.change_password', 'auth.logout', 'static'}
+    if request.endpoint not in allowed:
+        flash('Update your temporary password before continuing.', 'warning')
+        return redirect(url_for('auth.change_password'))
+    return None
 
 
 # ─────────────────────────────────────────────────────────────
@@ -82,16 +107,20 @@ def login():
 
         log_action('LOGIN', 'user', user.id, f'{user.full_name} logged in')
         flash(f'Welcome back, {user.full_name}!', 'success')
+        if user.role == 'trainee' and getattr(user, 'must_change_password', False):
+            flash('You are using a temporary password. Please set your own password now.', 'warning')
+            return redirect(url_for('auth.change_password'))
         return redirect(url_for('auth.dashboard_redirect'))
 
-    return render_template('auth/login.html', active_tab='staff')
+    active_tab = 'trainee' if request.args.get('tab') == 'trainee' else 'staff'
+    return render_template('auth/login.html', active_tab=active_tab)
 
 
 # ─────────────────────────────────────────────────────────────
 # TRAINEE SELF-REGISTRATION
 # Trainee enters their admission number + full name (must match
-# what admin pre-loaded). If matched and account has no password
-# yet (or is a fresh account), they set their own password.
+# what admin pre-loaded). If matched and not already activated,
+# the system issues a temporary password for first login.
 # ─────────────────────────────────────────────────────────────
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -100,10 +129,8 @@ def register():
 
     if request.method == 'POST':
         adm_no    = request.form.get('admission_no', '').strip()
-        full_name = request.form.get('full_name', '').strip().lower()
-        temp_pw   = request.form.get('temp_password', '').strip()   # optional
-        password  = request.form.get('password', '')
-        confirm   = request.form.get('confirm_password', '')
+        full_name = _clean_name(request.form.get('full_name', ''))
+        mobile_number = _clean_mobile_number(request.form.get('mobile_number', ''))
 
         # Basic validation
         if not adm_no or not adm_no.isdigit() or len(adm_no) != 5:
@@ -112,11 +139,8 @@ def register():
         if not full_name:
             flash('Full name is required.', 'danger')
             return render_template('auth/register.html')
-        if len(password) < 8:
-            flash('Password must be at least 8 characters.', 'danger')
-            return render_template('auth/register.html')
-        if password != confirm:
-            flash('Passwords do not match.', 'danger')
+        if not mobile_number or len(re.sub(r'\D', '', mobile_number)) < 10:
+            flash('Enter a valid mobile number.', 'danger')
             return render_template('auth/register.html')
 
         db = get_db()
@@ -135,7 +159,7 @@ def register():
             return render_template('auth/register.html')
 
         # Name must match (case-insensitive, strip spaces)
-        stored_name = trainee_row['full_name'].strip().lower()
+        stored_name = _clean_name(trainee_row['full_name'])
         if stored_name != full_name:
             flash('Full name does not match our records. '
                   'Enter your name exactly as registered by your admin.', 'danger')
@@ -145,23 +169,23 @@ def register():
             flash('Your account has been deactivated. Contact your administrator.', 'danger')
             return render_template('auth/register.html')
 
-        # If a temporary password was provided, verify it matches
-        if temp_pw:
-            if not check_password_hash(trainee_row.get('password_hash') or '', temp_pw):
-                flash('Temporary password is incorrect. Leave it blank if you do not have one.', 'danger')
-                return render_template('auth/register.html')
+        if trainee_row.get('password_hash') and not trainee_row.get('must_change_password', False):
+            flash('This trainee account is already activated. Log in with your admission number and password.', 'warning')
+            return redirect(url_for('auth.login') + '?tab=trainee')
 
-        # Set the new password (works for both first-time and re-registration)
+        temp_pw = _gen_temp_pw()
         db.table('users').update({
-            'password_hash': generate_password_hash(password),
-            'is_active':     True,
+            'password_hash': generate_password_hash(temp_pw),
+            'must_change_password': True,
+            'mobile_number': mobile_number,
+            'is_active': True,
         }).eq('id', trainee_row['id']).execute()
 
         log_action('TRAINEE_REGISTER', 'user', trainee_row['id'],
-                   f'{trainee_row["full_name"]} ({adm_no}) set password')
+                   f'{trainee_row["full_name"]} ({adm_no}) received temporary password')
 
-        flash('Account activated! You can now log in with your admission number and new password.', 'success')
-        return redirect(url_for('auth.login') + '?tab=trainee')
+        flash(f'Account verified. Temporary password: {temp_pw}  Use it to log in, then change it immediately.', 'success')
+        return render_template('auth/register.html', issued_temp_password=temp_pw, issued_admission_no=adm_no)
 
     return render_template('auth/register.html')
 
@@ -219,7 +243,10 @@ def change_password():
             return render_template('auth/change_password.html')
 
         get_db().table('users').update(
-            {'password_hash': generate_password_hash(new_pw)}
+            {
+                'password_hash': generate_password_hash(new_pw),
+                'must_change_password': False,
+            }
         ).eq('id', current_user.id).execute()
         log_action('CHANGE_PASSWORD', 'user', current_user.id)
         flash('Password changed successfully.', 'success')

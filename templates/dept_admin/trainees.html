@@ -93,8 +93,11 @@
 
           <td class="py-3 px-4 text-xs text-slate-500">{{ t.departments.name if t.departments else '—' }}</td>
           <td class="py-3 px-4">
-            <span class="pill {% if t.is_active %}badge-approved{% else %}badge-rejected{% endif %}">
-              {{ 'Active' if t.is_active else 'Inactive' }}
+            <span class="pill {% if not t.is_active %}badge-rejected{% elif not t.password_hash or t.must_change_password %}badge-pending{% else %}badge-approved{% endif %}">
+              {% if not t.is_active %}Inactive
+              {% elif not t.password_hash %}Pending activation
+              {% elif t.must_change_password %}Temp password
+              {% else %}Active{% endif %}
             </span>
           </td>
           <td class="py-3 px-4">
@@ -174,7 +177,7 @@
       <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
         <p class="text-xs text-amber-800 font-semibold">
           <i class="fas fa-key mr-1"></i>
-          A temporary password will be generated and shown after saving. Share it with the trainee so they can self-register.
+          No password is created here. The trainee must activate their account using their admission number and full name.
         </p>
       </div>
       <div class="flex gap-2 pt-1">
@@ -252,7 +255,7 @@
         <li><i class="fas fa-check-circle text-emerald-500 mr-1"></i> Courses and units are created when their code/name columns are filled</li>
         <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> If <code class="bg-slate-200 px-1 rounded">class_name</code> and unit columns are filled, the unit is linked to that class</li>
         <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> Trainees already in the system are skipped (no duplicates)</li>
-        <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> A temporary password is auto-generated for each new trainee</li>
+        <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> Imported trainees activate themselves with admission number and full name</li>
       </ul>
     </div>
 

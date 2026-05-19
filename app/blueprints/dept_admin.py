@@ -437,7 +437,6 @@ def add_trainee():
     name     = request.form.get('full_name', '').strip()
     adm_no   = request.form.get('admission_no', '').strip()
     class_id = request.form.get('class_id', '').strip()
-    temp_pw  = generate_temp_password()
 
     if not name or not adm_no:
         flash('Full name and admission number are required.', 'danger')
@@ -457,7 +456,8 @@ def add_trainee():
             'role':          'trainee',
             'department_id': dep_id,
             'admission_no':  adm_no,
-            'password_hash': generate_password_hash(temp_pw),
+            'password_hash': None,
+            'must_change_password': False,
             'created_by':    str(current_user.id),
             'is_active':     True,
         }).execute()
@@ -473,7 +473,7 @@ def add_trainee():
 
         log_action('CREATE_TRAINEE', 'user', None, f'{name} ({adm_no})')
         flash(f'Trainee "{name}" (ADM: {adm_no}) added. '
-              f'Temp password: {temp_pw} — share this with the trainee.', 'success')
+              f'They can now activate their account using admission number and full name.', 'success')
     except Exception as e:
         flash(f'Error: {e}', 'danger')
     return redirect(url_for('dept_admin.trainees'))
@@ -676,7 +676,6 @@ def import_trainees():
                 skipped += 1
                 continue
 
-            temp_pw = generate_temp_password()
             email   = f'{adm_no}@ttieportfolio.local'
             try:
                 result = db.table('users').insert({
@@ -685,7 +684,8 @@ def import_trainees():
                     'role':          'trainee',
                     'department_id': dep_id,
                     'admission_no':  adm_no,
-                    'password_hash': generate_password_hash(temp_pw),
+                    'password_hash': None,
+                    'must_change_password': False,
                     'created_by':    str(current_user.id),
                     'is_active':     True,
                 }).execute()

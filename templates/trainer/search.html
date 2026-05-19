@@ -105,6 +105,15 @@ function doSearch() {
           btns += '<form method="POST" action="/trainer/assessment/' + a.id + '/reject" class="inline">'
                 + '<button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg">Reject</button></form>';
         }
+        if (a.status === 'rejected' && a.users && a.users.mobile_number) {
+          var msg = 'Hello ' + (a.users.full_name || 'Trainee')
+            + ', your ' + (a.assessment_type || 'assessment') + ' assessment #' + (a.assessment_no || '')
+            + ' for ' + (a.units ? a.units.name : 'this unit')
+            + ' has been rejected. Reason: ' + (a.review_note || 'Please review the trainer feedback and upload the correct file.');
+          btns += '<a href="sms:' + a.users.mobile_number + '?body=' + encodeURIComponent(msg) + '"'
+                + ' class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg">'
+                + '<i class="fas fa-comment-dots mr-1"></i>Send Message</a>';
+        }
         return '<div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex items-start gap-4">'
           + '<div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0"><i class="fas fa-file-pdf text-red-500"></i></div>'
           + '<div class="flex-1 overflow-hidden">'
