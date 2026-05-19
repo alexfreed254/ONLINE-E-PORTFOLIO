@@ -16,7 +16,7 @@
 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
   <div>
     <h2 class="text-lg font-extrabold text-slate-800">Trainees</h2>
-    <p class="text-xs text-slate-400">Register individually or bulk-import from CSV</p>
+    <p class="text-xs text-slate-400">Register individually or bulk-import from Excel/CSV</p>
   </div>
   <div class="flex gap-2">
     <button onclick="document.getElementById('modal-add').classList.remove('hidden')"
@@ -25,7 +25,7 @@
     </button>
     <button onclick="document.getElementById('modal-import').classList.remove('hidden')"
       class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all">
-      <i class="fas fa-file-csv"></i> Import CSV
+      <i class="fas fa-file-excel"></i> Import Excel
     </button>
   </div>
 </div>
@@ -111,7 +111,7 @@
         <tr>
           <td colspan="7" class="py-12 text-center text-slate-400 text-sm">
             <i class="fas fa-user-graduate text-3xl mb-3 block opacity-30"></i>
-            No trainees registered yet. Add one or import from CSV.
+            No trainees registered yet. Add one or import from Excel/CSV.
           </td>
         </tr>
         {% endfor %}
@@ -193,7 +193,7 @@
 
 
 <!-- ══════════════════════════════════════════════════════════
-     MODAL — Import CSV
+     MODAL — Import Excel/CSV
 ══════════════════════════════════════════════════════════ -->
 <div id="modal-import" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
      style="background:rgba(0,0,0,0.45);">
@@ -203,13 +203,13 @@
       <i class="fas fa-times"></i>
     </button>
     <h3 class="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
-      <i class="fas fa-file-csv text-emerald-500"></i> Bulk Import Trainees
+      <i class="fas fa-file-excel text-emerald-500"></i> Bulk Import Trainees
     </h3>
-    <p class="text-xs text-slate-500 mb-4">Upload a CSV file to register multiple trainees at once.</p>
+    <p class="text-xs text-slate-500 mb-4">Upload an Excel (.xlsx) or CSV file to register trainees and create courses/units.</p>
 
-    <!-- CSV format guide -->
+    <!-- Import format guide -->
     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
-      <p class="text-xs font-bold text-slate-600 uppercase mb-2">Required CSV Format</p>
+      <p class="text-xs font-bold text-slate-600 uppercase mb-2">Required Spreadsheet Format</p>
       <div class="overflow-x-auto">
         <table class="text-xs w-full border-collapse">
           <thead>
@@ -217,6 +217,10 @@
               <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">admission_no</th>
               <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">full_name</th>
               <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">class_name <span class="font-normal text-slate-400">(optional)</span></th>
+              <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">course_code</th>
+              <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">course_name</th>
+              <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">unit_code</th>
+              <th class="px-3 py-1.5 text-left font-bold text-slate-700 border border-slate-300">unit_name</th>
             </tr>
           </thead>
           <tbody>
@@ -224,11 +228,19 @@
               <td class="px-3 py-1.5 font-mono border border-slate-200 text-indigo-600">12345</td>
               <td class="px-3 py-1.5 border border-slate-200">John Doe</td>
               <td class="px-3 py-1.5 border border-slate-200 text-slate-400">ICT Class A</td>
+              <td class="px-3 py-1.5 border border-slate-200">ICT5</td>
+              <td class="px-3 py-1.5 border border-slate-200">Information Communication Technology</td>
+              <td class="px-3 py-1.5 border border-slate-200">ICT101</td>
+              <td class="px-3 py-1.5 border border-slate-200">Computer Applications</td>
             </tr>
             <tr class="bg-slate-50">
               <td class="px-3 py-1.5 font-mono border border-slate-200 text-indigo-600">67890</td>
               <td class="px-3 py-1.5 border border-slate-200">Jane Smith</td>
-              <td class="px-3 py-1.5 border border-slate-200 text-slate-400">ICT Class B</td>
+              <td class="px-3 py-1.5 border border-slate-200 text-slate-400"></td>
+              <td class="px-3 py-1.5 border border-slate-200">EL6</td>
+              <td class="px-3 py-1.5 border border-slate-200">Electrical Engineering</td>
+              <td class="px-3 py-1.5 border border-slate-200">EL601</td>
+              <td class="px-3 py-1.5 border border-slate-200">Electrical Installation</td>
             </tr>
           </tbody>
         </table>
@@ -237,6 +249,8 @@
         <li><i class="fas fa-check-circle text-emerald-500 mr-1"></i> First row must be the header row</li>
         <li><i class="fas fa-check-circle text-emerald-500 mr-1"></i> <code class="bg-slate-200 px-1 rounded">admission_no</code> must be exactly 5 digits</li>
         <li><i class="fas fa-check-circle text-emerald-500 mr-1"></i> <code class="bg-slate-200 px-1 rounded">class_name</code> must match an existing class name exactly</li>
+        <li><i class="fas fa-check-circle text-emerald-500 mr-1"></i> Courses and units are created when their code/name columns are filled</li>
+        <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> If <code class="bg-slate-200 px-1 rounded">class_name</code> and unit columns are filled, the unit is linked to that class</li>
         <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> Trainees already in the system are skipped (no duplicates)</li>
         <li><i class="fas fa-info-circle text-blue-400 mr-1"></i> A temporary password is auto-generated for each new trainee</li>
       </ul>
@@ -252,8 +266,8 @@
 
     <form method="POST" action="{{ url_for('dept_admin.import_trainees') }}" enctype="multipart/form-data" class="space-y-3">
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Select CSV File</label>
-        <input type="file" name="csv_file" accept=".csv" required
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Select Excel or CSV File</label>
+        <input type="file" name="import_file" accept=".xlsx,.csv" required
           class="w-full text-sm text-slate-600 border-2 border-dashed border-slate-300 rounded-xl px-3 py-3
                  file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
                  file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700

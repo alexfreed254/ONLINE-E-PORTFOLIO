@@ -485,11 +485,112 @@ def add_trainee():
 def trainees_csv_template():
     """Download a blank CSV template for bulk trainee import."""
     from flask import make_response
-    csv_content = "admission_no,full_name,class_name\n12345,John Doe,ICT Class A\n67890,Jane Smith,\n"
+    csv_content = (
+        "admission_no,full_name,class_name,course_code,course_name,unit_code,unit_name\n"
+        "12345,John Doe,ICT Class A,ICT5,Information Communication Technology,ICT101,Computer Applications\n"
+        "67890,Jane Smith,,EL6,Electrical Engineering,EL601,Electrical Installation\n"
+    )
     resp = make_response(csv_content)
-    resp.headers['Content-Disposition'] = 'attachment; filename="trainees_import_template.csv"'
+    resp.headers['Content-Disposition'] = 'attachment; filename="trainees_courses_units_import_template.csv"'
     resp.headers['Content-Type'] = 'text/csv'
     return resp
+
+
+def _normalize_import_row(row: dict) -> dict:
+    aliases = {
+        'admission_no': ('admission_no', 'admission no', 'admission number', 'adm_no', 'adm no', 'admission'),
+        'full_name': ('full_name', 'full name', 'name', 'trainee name'),
+        'class_name': ('class_name', 'class name', 'class'),
+        'course_code': ('course_code', 'course code'),
+        'course_name': ('course_name', 'course name'),
+        'unit_code': ('unit_code', 'unit code'),
+        'unit_name': ('unit_name', 'unit name'),
+    }
+    normalized = {}
+    source = {str(k).strip().lower().replace('-', '_'): v for k, v in row.items() if k is not None}
+    source.update({str(k).strip().lower(): v for k, v in row.items() if k is not None})
+    for target, names in aliases.items():
+        value = ''
+        for name in names:
+            key = name.strip().lower().replace('-', '_')
+            if key in source and source[key] is not None:
+                value = str(source[key]).strip()
+                break
+        normalized[target] = value
+    return normalized
+
+
+def _read_trainee_import_rows(file_storage) -> tuple[list[dict], str | None]:
+    filename = (file_storage.filename or '').lower()
+    if filename.endswith('.csv'):
+        import csv, io
+        content = file_storage.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(content))
+        if not reader.fieldnames:
+            return [], 'File must have a header row.'
+        return [_normalize_import_row(row) for row in reader], None
+
+    if filename.endswith('.xlsx'):
+        try:
+            from openpyxl import load_workbook
+        except ImportError:
+            return [], 'Excel import requires openpyxl. Install dependencies with: pip install -r requirements.txt'
+
+        file_storage.stream.seek(0)
+        wb = load_workbook(file_storage.stream, read_only=True, data_only=True)
+        ws = wb.active
+        rows = ws.iter_rows(values_only=True)
+        headers = next(rows, None)
+        if not headers:
+            return [], 'Excel file must have a header row.'
+        header_names = [str(h).strip() if h is not None else '' for h in headers]
+        data = []
+        for values in rows:
+            if not values or not any(v is not None and str(v).strip() for v in values):
+                continue
+            data.append(_normalize_import_row(dict(zip(header_names, values))))
+        return data, None
+
+    return [], 'Please upload a .xlsx Excel file or a .csv file.'
+
+
+def _get_or_create_course(db, dep_id: str, code: str, name: str) -> tuple[str | None, bool]:
+    if not code or not name or not dep_id:
+        return None, False
+    existing = (db.table('courses').select('id')
+                .eq('department_id', dep_id)
+                .eq('code', code)
+                .limit(1)
+                .execute().data or [])
+    if existing:
+        return existing[0]['id'], False
+    result = db.table('courses').insert({
+        'name': name,
+        'code': code,
+        'department_id': dep_id,
+        'created_by': str(current_user.id),
+    }).execute()
+    return (result.data[0]['id'] if result.data else None), True
+
+
+def _get_or_create_unit(db, course_id: str, code: str, name: str) -> tuple[str | None, bool]:
+    if not course_id or not name:
+        return None, False
+    q = db.table('units').select('id').eq('course_id', course_id)
+    if code:
+        q = q.eq('code', code)
+    else:
+        q = q.eq('name', name)
+    existing = q.limit(1).execute().data or []
+    if existing:
+        return existing[0]['id'], False
+    result = db.table('units').insert({
+        'name': name,
+        'code': code or None,
+        'course_id': course_id,
+        'created_by': str(current_user.id),
+    }).execute()
+    return (result.data[0]['id'] if result.data else None), True
 
 
 @dept_admin_bp.route('/trainees/import', methods=['POST'])
@@ -497,36 +598,44 @@ def trainees_csv_template():
 @dept_admin_required
 def import_trainees():
     """
-    Bulk import trainees from a CSV file.
+    Bulk import trainees, courses, and units from CSV or Excel.
     Expected columns (header row required):
-        admission_no, full_name, class_name   (class_name is optional)
+        admission_no, full_name
+        Optional: class_name, course_code, course_name, unit_code, unit_name
     """
-    import csv, io
     db     = get_db()
     dep_id = str(current_user.department_id) if current_user.department_id else None
-    f      = request.files.get('csv_file')
+    f      = request.files.get('import_file') or request.files.get('csv_file')
 
     if not f or f.filename == '':
-        flash('Please select a CSV file.', 'danger')
+        flash('Please select an Excel or CSV file.', 'danger')
         return redirect(url_for('dept_admin.trainees'))
 
     try:
-        content  = f.read().decode('utf-8-sig')   # handle BOM
-        reader   = csv.DictReader(io.StringIO(content))
-        required = {'admission_no', 'full_name'}
-        if not required.issubset({c.strip().lower() for c in (reader.fieldnames or [])}):
-            flash('CSV must have columns: admission_no, full_name  (class_name optional)', 'danger')
+        rows, error = _read_trainee_import_rows(f)
+        if error:
+            flash(error, 'danger')
+            return redirect(url_for('dept_admin.trainees'))
+        if not rows:
+            flash('Import file has no data rows.', 'danger')
             return redirect(url_for('dept_admin.trainees'))
 
         # Build class name → id lookup
-        all_classes = db.table('classes').select('id, name').execute().data or []
+        q_classes = db.table('classes').select('id, name')
+        if dep_id:
+            q_classes = q_classes.eq('department_id', dep_id)
+        all_classes = q_classes.execute().data or []
         class_map   = {c['name'].strip().lower(): c['id'] for c in all_classes}
 
-        added = skipped = errors = 0
-        for row in reader:
-            adm_no    = str(row.get('admission_no', '')).strip().zfill(5)
-            full_name = str(row.get('full_name', '')).strip()
-            cls_name  = str(row.get('class_name', '')).strip()
+        added = skipped = errors = courses_created = units_created = class_unit_links = 0
+        for row in rows:
+            adm_no      = row['admission_no'].strip().zfill(5)
+            full_name   = row['full_name'].strip()
+            cls_name    = row['class_name'].strip()
+            course_code = row['course_code'].strip().upper()
+            course_name = row['course_name'].strip()
+            unit_code   = row['unit_code'].strip().upper()
+            unit_name   = row['unit_name'].strip()
 
             if not adm_no or not full_name:
                 errors += 1
@@ -535,7 +644,32 @@ def import_trainees():
                 errors += 1
                 continue
 
-            # Skip if already exists
+            course_id = unit_id = None
+            if course_code or course_name or unit_code or unit_name:
+                if not course_code or not course_name:
+                    errors += 1
+                    continue
+                course_id, created = _get_or_create_course(db, dep_id, course_code, course_name)
+                courses_created += 1 if created else 0
+                if unit_code or unit_name:
+                    if not unit_name:
+                        errors += 1
+                        continue
+                    unit_id, created = _get_or_create_unit(db, course_id, unit_code, unit_name)
+                    units_created += 1 if created else 0
+
+            class_id = class_map.get(cls_name.lower()) if cls_name else None
+            if class_id and unit_id:
+                try:
+                    db.table('class_units').insert({
+                        'class_id': class_id,
+                        'unit_id': unit_id,
+                    }).execute()
+                    class_unit_links += 1
+                except Exception:
+                    pass
+
+            # Skip trainee creation if already exists, but keep course/unit imports above.
             existing = (db.table('users').select('id')
                         .eq('admission_no', adm_no).execute().data)
             if existing:
@@ -556,8 +690,6 @@ def import_trainees():
                     'is_active':     True,
                 }).execute()
 
-                # Enroll in class if provided
-                class_id = class_map.get(cls_name.lower()) if cls_name else None
                 if class_id and result.data:
                     try:
                         db.table('enrollments').insert({
@@ -571,8 +703,13 @@ def import_trainees():
                 errors += 1
 
         log_action('IMPORT_TRAINEES', 'user', None,
-                   f'Imported {added}, skipped {skipped}, errors {errors}')
-        flash(f'Import complete — {added} added, {skipped} already existed, {errors} errors.', 'success')
+                   f'Imported {added}, skipped {skipped}, courses {courses_created}, units {units_created}, errors {errors}')
+        flash(
+            f'Import complete — {added} trainee(s) added, {skipped} already existed, '
+            f'{courses_created} course(s) created, {units_created} unit(s) created, '
+            f'{class_unit_links} class-unit link(s), {errors} error(s).',
+            'success'
+        )
     except Exception as e:
         flash(f'Import failed: {e}', 'danger')
 

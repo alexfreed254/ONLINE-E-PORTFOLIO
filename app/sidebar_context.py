@@ -47,13 +47,17 @@ def get_sidebar_stats():
 
         if role == 'trainer':
             q = db.table('assessments').select('status')
-            if dep_id:
-                class_ids = [
-                    c['id'] for c in
-                    db.table('classes').select('id').eq('department_id', dep_id).execute().data or []
-                ]
-                if class_ids:
-                    q = q.in_('class_id', class_ids)
+            unit_ids = [
+                r['unit_id'] for r in
+                db.table('trainer_units')
+                .select('unit_id')
+                .eq('trainer_id', str(current_user.id))
+                .execute().data or []
+            ]
+            if unit_ids:
+                q = q.in_('unit_id', unit_ids)
+            else:
+                q = q.eq('unit_id', 'none')
             all_a = q.execute().data or []
             return {
                 'kind': 'trainer',

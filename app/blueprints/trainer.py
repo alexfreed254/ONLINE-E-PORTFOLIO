@@ -23,7 +23,7 @@ def trainer_required(f):
 
 
 def _trainer_assigned_unit_ids(db) -> list:
-    """Return list of unit_ids this trainer is assigned to. Empty = no restriction."""
+    """Return list of unit_ids this trainer is assigned to."""
     if current_user.role != 'trainer':
         return []          # dept_admin / super_admin see everything
     rows = (db.table('trainer_units').select('unit_id')
@@ -36,9 +36,7 @@ def _check_unit_access(db, unit_id: str) -> bool:
     if current_user.role != 'trainer':
         return True
     assigned = _trainer_assigned_unit_ids(db)
-    if not assigned:
-        return True        # no assignments configured yet — allow all
-    return unit_id in assigned
+    return bool(assigned) and unit_id in assigned
 
 
 def _rename_script_file(db, assessment_id: str, action: str, trainer_name: str):
@@ -160,6 +158,8 @@ def browse_class(class_id):
     # Filter to assigned units only (for trainers)
     if assigned_unit_ids:
         units = [u for u in units if u['id'] in assigned_unit_ids]
+    elif current_user.role == 'trainer':
+        units = []
 
     for unit in units:
         counts = (db.table('assessments').select('status')
@@ -384,6 +384,8 @@ def search():
     if assigned_unit_ids:
         units = (db.table('units').select('*')
                  .in_('id', assigned_unit_ids).order('name').execute().data or [])
+    elif current_user.role == 'trainer':
+        units = []
     else:
         units = db.table('units').select('*').order('name').execute().data or []
 
@@ -403,6 +405,8 @@ def search_results():
     year    = request.args.get('year', '').strip()
 
     # Enforce unit restriction
+    if current_user.role == 'trainer' and not assigned_unit_ids:
+        return jsonify({'assessments': [], 'total': 0})
     if unit_id and assigned_unit_ids and unit_id not in assigned_unit_ids:
         return jsonify({'assessments': [], 'total': 0})
 
